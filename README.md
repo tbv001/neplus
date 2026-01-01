@@ -2,6 +2,8 @@
 
 This is the official repository for the **Nodegraph Editor+** Garry's Mod workshop addon.
 
+You're currently in the work-in-progress rewrite branch page.
+
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3387089606)
 
 ## Installation
