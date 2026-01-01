@@ -1,6 +1,6 @@
-# Nodegraph Editor Plus
+# Nodegraph Editor+
 
-This is the official repository for the **Nodegraph Editor Plus** Garry's Mod workshop addon.
+This is the official repository for the **Nodegraph Editor+** Garry's Mod workshop addon.
 
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3387089606)
 
