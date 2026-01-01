@@ -2,6 +2,8 @@
 
 This is the official repository for the **Nodegraph Editor+** Garry's Mod workshop addon.
 
+Check out the [rewrite](https://github.com/tbv001/neplus/tree/rewrite) branch.
+
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3387089606)
 
 ## Installation
