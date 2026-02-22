@@ -234,7 +234,9 @@ if SERVER then
 			return true
 		end
 	
-		for _, navArea in ipairs(navmesh.GetAllNavAreas()) do
+		local allNavAreas = navmesh.GetAllNavAreas()
+		for i = 1, #allNavAreas do
+			local navArea = allNavAreas[i]
 			if isAreaEligible(navArea) then
 				local areaData = {
 					id = navArea:GetID(),
@@ -248,7 +250,8 @@ if SERVER then
 			end
 		end
 	
-		for _, areaData in ipairs(eligibleNavAreas) do
+		for i = 1, #eligibleNavAreas do
+			local areaData = eligibleNavAreas[i]
 			local navArea = navmesh.GetNavAreaByID(areaData.id)
 			if not navArea then continue end
 	
@@ -273,7 +276,8 @@ if SERVER then
 		local usedAreaIds = {}
 		local remainingAreas = {}
 
-		for _, areaData in ipairs(eligibleNavAreas) do
+		for i = 1, #eligibleNavAreas do
+			local areaData = eligibleNavAreas[i]
 			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
 				if #finalAreas < MAX_NODES then
 					table.insert(finalAreas, areaData)
@@ -293,14 +297,16 @@ if SERVER then
 				local connectedAdjacents = 0
 				local connectedJumps = 0
 				
-				for _, adjId in ipairs(areaData.adjacents) do
+				for j = 1, #areaData.adjacents do
+					local adjId = areaData.adjacents[j]
 					if usedAreaIds[adjId] then
 						connectedAdjacents = connectedAdjacents + 1
 					end
 				end
 				
 				if jumpLinksEnabled then
-					for _, jumpId in ipairs(areaData.jumps) do
+					for j = 1, #areaData.jumps do
+						local jumpId = areaData.jumps[j]
 						if usedAreaIds[jumpId] then
 							connectedJumps = connectedJumps + 1
 						end
@@ -308,18 +314,21 @@ if SERVER then
 				end
 				
 				if connectedAdjacents == 0 and (not jumpLinksEnabled or connectedJumps == 0) then
-					for j, remainingArea in ipairs(remainingAreas) do
+					for j = 1, #remainingAreas do
+						local remainingArea = remainingAreas[j]
 						local replacementConnectedAdjacents = 0
 						local replacementConnectedJumps = 0
 						
-						for _, adjId in ipairs(remainingArea.adjacents) do
+						for k = 1, #remainingArea.adjacents do
+							local adjId = remainingArea.adjacents[k]
 							if usedAreaIds[adjId] then
 								replacementConnectedAdjacents = replacementConnectedAdjacents + 1
 							end
 						end
 						
 						if jumpLinksEnabled then
-							for _, jumpId in ipairs(remainingArea.jumps) do
+							for k = 1, #remainingArea.jumps do
+								local jumpId = remainingArea.jumps[k]
 								if usedAreaIds[jumpId] then
 									replacementConnectedJumps = replacementConnectedJumps + 1
 								end
@@ -1254,7 +1263,8 @@ if(CLIENT) then
 			local areaIDToNodeID = {}
 			local nodeList = {}
 			local nodesToClean = {}
-			for _, areaData in ipairs(posTable) do
+			for i = 1, #posTable do
+				local areaData = posTable[i]
 				numNodes = nodegraph:CountNodes(nodes)
 				if numNodes >= MAX_NODES then break end
 				local nodeID = tool:CreateNodeGen(areaData.pos)
@@ -1269,10 +1279,12 @@ if(CLIENT) then
 			end
 			tool:BuildNodeGrid()
 			if cvGrndGenNavLinks:GetBool() then
-				for _, areaData in ipairs(posTable) do
+				for i = 1, #posTable do
+					local areaData = posTable[i]
 					local srcNodeID = areaIDToNodeID[areaData.id]
 					if srcNodeID then
-						for _, adjAreaID in ipairs(areaData.adjacents) do
+						for j = 1, #areaData.adjacents do
+							local adjAreaID = areaData.adjacents[j]
 							local destNodeID = areaIDToNodeID[adjAreaID]
 							if destNodeID then
 								tool:AddLink(srcNodeID, destNodeID)
@@ -1282,10 +1294,12 @@ if(CLIENT) then
 				end
 			end
 			if cvGrndGenJumpLinks:GetBool() then
-				for _, areaData in ipairs(posTable) do
+				for i = 1, #posTable do
+					local areaData = posTable[i]
 					local srcNodeID = areaIDToNodeID[areaData.id]
 					if srcNodeID then
-						for _, adjAreaID in ipairs(areaData.jumps) do
+						for j = 1, #areaData.jumps do
+							local adjAreaID = areaData.jumps[j]
 							local destNodeID = areaIDToNodeID[adjAreaID]
 							if destNodeID then
 								tool:AddLink(srcNodeID, destNodeID, 2)
@@ -1674,7 +1688,8 @@ if(CLIENT) then
 			return a:DistToSqr(startPos) < b:DistToSqr(startPos)
 		end)
 
-		for _, pos in ipairs(candidates) do
+		for _ = 1, #candidates do
+			local pos = candidates[_]
 			if nodegraph:CountNodes(nodes) >= MAX_NODES then
 				notification.AddLegacy("Reached node limit. Stopped generation.", 1, 8)
 				break
@@ -1739,7 +1754,8 @@ if(CLIENT) then
 
 		if count > 0 then
 			self:BuildNodeGrid()
-			for _, nodeID in ipairs(createdNodes) do
+			for i = 1, #createdNodes do
+				local nodeID = createdNodes[i]
 				local node = nodes[nodeID]
 				if not node then continue end
 
@@ -1908,7 +1924,8 @@ if(CLIENT) then
 		local autoHull = cvHullAuto:GetBool()
 		local move = {}
 		local cvHulls = {cvHull1, cvHull2, cvHull3, cvHull4, cvHull5, cvHull6, cvHull7, cvHull8, cvHull9, cvHull10}
-		for i, cv in ipairs(cvHulls) do
+		for i = 1, #cvHulls do
+			local cv = cvHulls[i]
 			if movetype == 1 and autoHull then
 				move[i] = self:TraceHullType(srcPos, destPos, i, true) and (1 * movetype) or 0
 			elseif movetype == 4 and autoHull then
@@ -2248,7 +2265,8 @@ if(CLIENT) then
 			render.SetColorMaterial()
 		end
 		if(self.m_tbLinks) then
-			for _,nodeLinked in ipairs(self.m_tbLinks) do
+			for i = 1, #self.m_tbLinks do
+				local nodeLinked = self.m_tbLinks[i]
 				render.DrawBeam(self:GetPos() +offset,nodeLinked.pos +offset,plainLinks and 1 or 10,0,0, (nodeLinked.type == NODE_TYPE_GROUND and colDefault) or (nodeLinked.type == NODE_TYPE_AIR and colNew) or (nodeLinked.type == NODE_TYPE_CLIMB and colNewBlocked) or colDefault)
 			end
 		end
@@ -2733,7 +2751,8 @@ if(CLIENT) then
 					else
 						timer.Simple(0.1, function()
 							local loadedHints = 0
-							for _, data in ipairs(hintData) do
+							for i = 1, #hintData do
+								local data = hintData[i]
 								if not data.IsInfoHint then
 									local lookupID = tonumber(data.NodeID)
 									for k, v in pairs(lookup) do
@@ -2879,7 +2898,8 @@ if(CLIENT) then
 			local nodeClosest
 			local nodeClosestType
 			local distClosest = math.huge
-			for _,nodeID in ipairs(nodesInRay) do
+			for i = 1, #nodesInRay do
+				local nodeID = nodesInRay[i]
 				local node = nodes[nodeID]
 				local d = node.pos:DistToSqr(pos)
 				if(d < distClosest) then
@@ -3052,7 +3072,7 @@ if(CLIENT) then
 		wang:Dock(RIGHT)
 		wang:SetWidth(20)
 		local i
-		for _,val in ipairs(values) do if(val == snap) then i = _; break end end
+		for _ = 1, #values do local val = values[_] if(val == snap) then i = _; break end end
 		if(i) then slider:SetSlideX((i - 1) / (#values - 1)) end
 		slider.TranslateValues = function(_, x, y)
 			local num = tonumber(x * (#values - 1) + 1) or 0
@@ -3250,7 +3270,8 @@ if(CLIENT) then
 			else
 				timer.Simple(0.1, function()
 					local loadedHints = 0
-					for _, data in ipairs(hintData) do
+					for i = 1, #hintData do
+						local data = hintData[i]
 						if not data.IsInfoHint then
 							local lookupID = tonumber(data.NodeID)
 							for k, v in pairs(lookup) do

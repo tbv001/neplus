@@ -362,7 +362,8 @@ function methods:Save(f)
 	local nodeKeys = {}
 	for k in pairs(nodes) do table.insert(nodeKeys, k) end
 	table.sort(nodeKeys)
-	for _, k in ipairs(nodeKeys) do	-- Remove info_hint(s) as they are not included in the nodegraph.
+	for i = 1, #nodeKeys do	-- Remove info_hint(s) as they are not included in the nodegraph.
+		local k = nodeKeys[i]
 		local node = nodes[k]
 		if node.type == NODE_TYPE_HINT then
 			tempHints[hintID] = node
@@ -373,7 +374,8 @@ function methods:Save(f)
 	nodeKeys = {}
 	for k in pairs(nodes) do table.insert(nodeKeys, k) end
 	table.sort(nodeKeys)
-	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+	for i = 1, #nodeKeys do -- Put everything in a sequential order
+		local k = nodeKeys[i]
 		local node = nodes[k]
 		nodes[k] = nil
 		nodes[nodeID] = node
@@ -385,7 +387,8 @@ function methods:Save(f)
 	local linkKeys = {}
 	for k in pairs(links) do table.insert(linkKeys, k) end
 	table.sort(linkKeys)
-	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
+		local k = linkKeys[i]
 		local link = links[k]
 		links[k] = nil
 		links[linkID] = link
@@ -495,7 +498,8 @@ function methods:SaveAsENT(f)
 	local nodeKeys = {}
 	for k in pairs(nodes) do table.insert(nodeKeys, k) end
 	table.sort(nodeKeys)
-	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+	for i = 1, #nodeKeys do -- Put everything in a sequential order
+		local k = nodeKeys[i]
 		local node = nodes[k]
 		nodes[k] = nil
 		nodes[nodeID] = node
@@ -507,7 +511,8 @@ function methods:SaveAsENT(f)
 	local linkKeys = {}
 	for k in pairs(links) do table.insert(linkKeys, k) end
 	table.sort(linkKeys)
-	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
+		local k = linkKeys[i]
 		local link = links[k]
 		links[k] = nil
 		links[linkID] = link
@@ -518,7 +523,8 @@ function methods:SaveAsENT(f)
 		linkID = linkID + 1
 	end
 	
-	for i, node in ipairs(nodes) do
+	for i = 1, #nodes do
+		local node = nodes[i]
 		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
 			f:Write("entity\n")
 			f:Write("{\n")
@@ -544,7 +550,8 @@ function methods:SaveAsENT(f)
 			f:Write("\t\"MaximumState\" \"3\"\n")
 			if node.type == NODE_TYPE_CLIMB then
 				local success = false
-				for i, link in ipairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 8) then
 						if nodes[link.destID] and nodes[link.destID].type ~= NODE_TYPE_CLIMB then
 							continue
@@ -560,7 +567,8 @@ function methods:SaveAsENT(f)
 				end
 			elseif node.type == NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
-				for i, link in ipairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 2) then
 						if nodes[link.destID] and nodes[link.destID].hint ~= 901 then
 							continue
@@ -677,7 +685,8 @@ function methods:SaveToVMF(f)
 	local nodeKeys = {}
 	for k in pairs(nodes) do table.insert(nodeKeys, k) end
 	table.sort(nodeKeys)
-	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+	for i = 1, #nodeKeys do -- Put everything in a sequential order
+		local k = nodeKeys[i]
 		local node = nodes[k]
 		nodes[k] = nil
 		nodes[nodeID] = node
@@ -689,7 +698,8 @@ function methods:SaveToVMF(f)
 	local linkKeys = {}
 	for k in pairs(links) do table.insert(linkKeys, k) end
 	table.sort(linkKeys)
-	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
+		local k = linkKeys[i]
 		local link = links[k]
 		links[k] = nil
 		links[linkID] = link
@@ -704,7 +714,8 @@ function methods:SaveToVMF(f)
 	f:Write(vmfContent)
 	vmfContent = nil
 	
-	for i, node in ipairs(nodes) do
+	for i = 1, #nodes do
+		local node = nodes[i]
 		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
 			f:Write("entity\n")
 			f:Write("{\n")
@@ -730,7 +741,8 @@ function methods:SaveToVMF(f)
 			f:Write("\t\"MaximumState\" \"3\"\n")
 			if node.type == NODE_TYPE_CLIMB then
 				local success = false
-				for i, link in ipairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 8) then
 						if nodes[link.destID] and nodes[link.destID].type ~= NODE_TYPE_CLIMB then
 							continue
@@ -746,7 +758,8 @@ function methods:SaveToVMF(f)
 				end
 			elseif node.type == NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
-				for i, link in ipairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 2) then
 						if nodes[link.destID] and nodes[link.destID].hint ~= 901 then
 							continue
