@@ -37,11 +37,18 @@ function EFFECT:SetType(type)
 	self:SetModel(nodeTypes[type] || nodeTypes[2])
 end
 
-function EFFECT:GetType() return self.m_type end
+function EFFECT:GetType()
+	return self.m_type
+end
 
-function EFFECT:SetNode(node,nodeID) self.m_node = node; self.m_nodeID = nodeID end
+function EFFECT:SetNode(node,nodeID)
+	self.m_node = node
+	self.m_nodeID = nodeID
+end
 
-function EFFECT:GetNode() return self.m_node,self.m_nodeID end
+function EFFECT:GetNode()
+	return self.m_node,self.m_nodeID
+end
 
 function EFFECT:OnRemove()
 end
@@ -95,6 +102,11 @@ function EFFECT:Render()
 	if self.DrawMassRem then self:DrawMassRem() end
 end
 
-function EFFECT:ClearLinks() self.m_tbLinks = {} end
+function EFFECT:ClearLinks()
+	self.m_tbLinks = {}
+end
 
-function EFFECT:AddLink(node) table.insert(self.m_tbLinks,node) end
+function EFFECT:AddLink(node)
+	if not self.m_tbLinks then self.m_tbLinks = {} end
+	table.insert(self.m_tbLinks, node)
+end

@@ -502,7 +502,7 @@ function nodegraph_create_nodeable_map()
 end
 
 function sv_opendoor(a)
-	x = ents.FindByClass(a)
+	local x = ents.FindByClass(a)
 	for k,v in pairs(x) do
 		v:Fire("open")
 	end
@@ -531,7 +531,7 @@ function sv_breakbrush()
 		RunConsoleCommand("ent_remove_all", "func_brush")
 	end
 	
-	x = ents.FindByClass("prop_dynamic")
+	local x = ents.FindByClass("prop_dynamic")
 	for k,v in pairs(x) do
 		local nm = v:GetName()
 		if string.find(nm,"door") or string.find(nm,"barrier") or nm=="cap2_signs_back_props" then
@@ -879,6 +879,19 @@ if(CLIENT) then
 	local cvHull9 = CreateClientConVar("cl_nodegraph_tool_hulltype_9", 1, false)
 	local cvHull10 = CreateClientConVar("cl_nodegraph_tool_hulltype_10", 1, false)
 
+	local HULL_TYPES = {
+		[1]  = { mins = Vector(-13, -13, 0),   maxs = Vector(13, 13, 72)  }, -- HUMAN_HULL
+		[2]  = { mins = Vector(-20, -20, -20), maxs = Vector(20, 20, 20)  }, -- SMALL_CENTERED_HULL
+		[3]  = { mins = Vector(-15, -15, 0),   maxs = Vector(15, 15, 72)  }, -- WIDE_HUMAN_HULL
+		[4]  = { mins = Vector(-12, -12, 0),   maxs = Vector(12, 12, 24)  }, -- TINY_HULL
+		[5]  = { mins = Vector(-35, -35, 0),   maxs = Vector(35, 35, 32)  }, -- WIDE_SHORT_HULL
+		[6]  = { mins = Vector(-16, -16, 0),   maxs = Vector(16, 16, 64)  }, -- MEDIUM_HULL
+		[7]  = { mins = Vector(-8, -8, -4),    maxs = Vector(8, 8, 4)     }, -- TINY_CENTERED_HULL
+		[8]  = { mins = Vector(-40, -40, 0),   maxs = Vector(40, 40, 100) }, -- LARGE_HULL
+		[9]  = { mins = Vector(-38, -38, -38), maxs = Vector(38, 38, 38)  }, -- LARGE_CENTERED_HULL
+		[10] = { mins = Vector(-18, -18, 0),   maxs = Vector(18, 18, 100) }  -- MEDIUM_TALL_HULL
+	}
+
 	local TraceMask = MASK_NPCWORLDSTATIC
 
 	local matArrow = Material("widgets/arrow.png","nocull translucent vertexalpha smooth mips")
@@ -931,7 +944,7 @@ if(CLIENT) then
 		end
 		if self:GetOwner():KeyDown(IN_RELOAD) then
 			local radius = cvMassRemRadius:GetInt()
-			radiusSqr = radius * radius
+			local radiusSqr = radius * radius
 			local origin = self:GetMassRemOrigin()
 			local removed = 0
 			for id, node in pairs(nodes) do
@@ -986,13 +999,6 @@ if(CLIENT) then
 		end
 		return true
 	end
-	local NODE_CLIMB_ON			=	(bit.lshift(1,1))//,	// Node on ladder somewhere
-	local NODE_CLIMB_OFF_FORWARD =	(bit.lshift(1,2))//,	// Dismount climb by going forward
-	local NODE_CLIMB_OFF_LEFT	=	(bit.lshift(1,3))//,	// Dismount climb by going left
-	local NODE_CLIMB_OFF_RIGHT	=	(bit.lshift(1,4))//,	// Dismount climb by going right
-	-- TODO: Are these required for climb nodes?
-	local NODE_CLIMB_EXIT		=	bit.bor(NODE_CLIMB_OFF_FORWARD,NODE_CLIMB_OFF_LEFT,NODE_CLIMB_OFF_RIGHT)
-	local q = 0
 	function TOOL:CreateNode(pos)
 		local createType = cvCreateType:GetInt()
 		local h = cvH:GetInt()
@@ -1541,20 +1547,20 @@ if(CLIENT) then
 		if count > 0 then
 			notification.AddLegacy("Successfully generated " .. count .. " Air Nodes.",0,8)
 		else
-			notification.AddLegacy("Failed to generate Air Nodes. Either no Ground Nodes found, or no space for Air Nodes.")
+			notification.AddLegacy("Failed to generate Air Nodes. Either no Ground Nodes found, or no space for Air Nodes.",1,8)
 		end
 		self:BuildNodeGrid()
 		self:BuildZone()
 	end
 	function TOOL:GenerateJumpLinks()
-		local distMin = math.min(cvDist:GetInt(), cvDistLinkJmpLinkGen:GetInt())
-		distMin = distMin * distMin
+		local distMinLinear = math.min(cvDist:GetInt(), cvDistLinkJmpLinkGen:GetInt())
+		local distMin = distMinLinear * distMinLinear
 		local pl = self:GetOwner()
 		self:RemoveLinksWithType(2)
 		self:BuildNodeGrid()
 		for a1, nodea in pairs(nodes) do
 			if nodea.type ~= NODE_TYPE_GROUND then continue end
-			local neighborCandidates = nodeGrid:Query(nodea.pos, distMin, nodes)
+			local neighborCandidates = nodeGrid:Query(nodea.pos, distMinLinear, nodes)
 			for b1, nodeb in pairs(neighborCandidates) do
 				if b1 ~= a1 and nodeb and nodeb.type == NODE_TYPE_GROUND then
 					local d = nodea.pos:DistToSqr(nodeb.pos)
@@ -1841,19 +1847,6 @@ if(CLIENT) then
 		local offset = 16 - math.Clamp(cvH:GetInt(), 0, 16)
 		local pl = self:GetOwner()
 
-		local HULL_TYPES = {
-			[1]  = { mins = Vector(-13, -13, 0),   maxs = Vector(13, 13, 72)  }, -- HUMAN_HULL
-			[2]  = { mins = Vector(-20, -20, -20), maxs = Vector(20, 20, 20)  }, -- SMALL_CENTERED_HULL
-			[3]  = { mins = Vector(-15, -15, 0),   maxs = Vector(15, 15, 72)  }, -- WIDE_HUMAN_HULL
-			[4]  = { mins = Vector(-12, -12, 0),   maxs = Vector(12, 12, 24)  }, -- TINY_HULL
-			[5]  = { mins = Vector(-35, -35, 0),   maxs = Vector(35, 35, 32)  }, -- WIDE_SHORT_HULL
-			[6]  = { mins = Vector(-16, -16, 0),   maxs = Vector(16, 16, 64)  }, -- MEDIUM_HULL
-			[7]  = { mins = Vector(-8, -8, -4),    maxs = Vector(8, 8, 4)     }, -- TINY_CENTERED_HULL
-			[8]  = { mins = Vector(-40, -40, 0),   maxs = Vector(40, 40, 100) }, -- LARGE_HULL
-			[9]  = { mins = Vector(-38, -38, -38), maxs = Vector(38, 38, 38)  }, -- LARGE_CENTERED_HULL
-			[10] = { mins = Vector(-18, -18, 0),   maxs = Vector(18, 18, 100) }  -- MEDIUM_TALL_HULL
-		}
-
 		local def = HULL_TYPES[hullType]
 		if not def then return false end
 
@@ -1880,18 +1873,6 @@ if(CLIENT) then
 	end
 	function TOOL:AdjustNodeOffsets()
 		local pl = self:GetOwner()
-		local HULL_TYPES = {
-			[1]  = { mins = Vector(-13, -13, 0),   maxs = Vector(13, 13, 72)  }, -- HUMAN_HULL
-			[2]  = { mins = Vector(-20, -20, -20), maxs = Vector(20, 20, 20)  }, -- SMALL_CENTERED_HULL
-			[3]  = { mins = Vector(-15, -15, 0),   maxs = Vector(15, 15, 72)  }, -- WIDE_HUMAN_HULL
-			[4]  = { mins = Vector(-12, -12, 0),   maxs = Vector(12, 12, 24)  }, -- TINY_HULL
-			[5]  = { mins = Vector(-35, -35, 0),   maxs = Vector(35, 35, 32)  }, -- WIDE_SHORT_HULL
-			[6]  = { mins = Vector(-16, -16, 0),   maxs = Vector(16, 16, 64)  }, -- MEDIUM_HULL
-			[7]  = { mins = Vector(-8, -8, -4),    maxs = Vector(8, 8, 4)     }, -- TINY_CENTERED_HULL
-			[8]  = { mins = Vector(-40, -40, 0),   maxs = Vector(40, 40, 100) }, -- LARGE_HULL
-			[9]  = { mins = Vector(-38, -38, -38), maxs = Vector(38, 38, 38)  }, -- LARGE_CENTERED_HULL
-			[10] = { mins = Vector(-18, -18, 0),   maxs = Vector(18, 18, 100) }  -- MEDIUM_TALL_HULL
-		}
 
 		for nodeID, node in pairs(nodes) do
 			if node.type ~= NODE_TYPE_GROUND then continue end
@@ -2192,7 +2173,7 @@ if(CLIENT) then
 			local eSelected = self.m_tbEffects[self.m_selected]
 			if(eSelected) then eSelected:SetColor(Color(255,255,255,255)) end
 		end
-		node = nodes[nodeID]
+		local node = nodes[nodeID]
 		self:ClearSelection()
 		local e = self.m_tbEffects[nodeID]
 		if(e) then

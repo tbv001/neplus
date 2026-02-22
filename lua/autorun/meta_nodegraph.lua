@@ -45,9 +45,13 @@ function methods:Clear()
 	}
 end
 
-function methods:GetAINetVersion() return self:GetData().ainet_version end
+function methods:GetAINetVersion()
+	return self:GetData().ainet_version
+end
 
-function methods:GetMapVersion() return self:GetData().map_version end
+function methods:GetMapVersion()
+	return self:GetData().map_version
+end
 
 function methods:ParseFile(f,fmode)
 	fmode = fmode or "GAME"
@@ -61,11 +65,13 @@ function methods:ParseFile(f,fmode)
 		}
 		if(ainet_ver != AINET_VERSION_NUMBER) then
 			MsgN("Unknown graph file")
+			f:Close()
 			return
 		end
 		local numNodes = f:ReadLong()
 		if(numNodes > MAX_NODES || numNodes < 0) then
 			MsgN("Graph file has an unexpected amount of nodes")
+			f:Close()
 			return
 		end
 		local nodes = {}
@@ -139,13 +145,25 @@ function methods:ParseFile(f,fmode)
 	return nodegraph
 end
 
-function methods:GetData() return self.m_nodegraph end
+function methods:GetData()
+	return self.m_nodegraph
+end
 
-function methods:GetNodes() return self:GetData().nodes end
-function methods:GetLinks() return self:GetData().links end
-function methods:GetLookupTable() return self:GetData().lookup end
+function methods:GetNodes()
+	return self:GetData().nodes
+end
 
-function methods:GetNode(nodeID) return self:GetNodes()[nodeID] end
+function methods:GetLinks()
+	return self:GetData().links
+end
+
+function methods:GetLookupTable()
+	return self:GetData().lookup
+end
+
+function methods:GetNode(nodeID)
+	return self:GetNodes()[nodeID]
+end
 
 -- Since info_hint(s) are not included in the nodegraph, they must not count towards the node count!
 function methods:CountNodes(tbl)
@@ -341,29 +359,41 @@ function methods:Save(f)
 	local hintID = 1
 	local nodeIDs = {}
 	local tempHints = {}
-	for _, node in pairs(nodes) do	-- Remove info_hint(s) as they are not included in the nodegraph.
+	local nodeKeys = {}
+	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	table.sort(nodeKeys)
+	for _, k in ipairs(nodeKeys) do	-- Remove info_hint(s) as they are not included in the nodegraph.
+		local node = nodes[k]
 		if node.type == NODE_TYPE_HINT then
 			tempHints[hintID] = node
-			nodes[_] = nil
+			nodes[k] = nil
 			hintID = hintID + 1
 		end
 	end
-	for _,node in pairs(nodes) do // Put everything in a sequential order
-		nodes[_] = nil
+	nodeKeys = {}
+	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	table.sort(nodeKeys)
+	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+		local node = nodes[k]
+		nodes[k] = nil
 		nodes[nodeID] = node
-		nodeIDs[_] = nodeID
-		nodeID = nodeID +1
+		nodeIDs[k] = nodeID
+		nodeID = nodeID + 1
 	end
 	local links = data.links
 	local linkID = 1
-	for _,link in pairs(links) do // Update the node IDs in the links and put everything in a sequential order
-		links[_] = nil
+	local linkKeys = {}
+	for k in pairs(links) do table.insert(linkKeys, k) end
+	table.sort(linkKeys)
+	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+		local link = links[k]
+		links[k] = nil
 		links[linkID] = link
 		link.destID = nodeIDs[link.destID]
 		link.srcID = nodeIDs[link.srcID]
 		link.dest = nodes[link.destID]
 		link.src = nodes[link.srcID]
-		linkID = linkID +1
+		linkID = linkID + 1
 	end
 
 	-- After putting everything in sequential order, we save hints for corresponding node IDs.
@@ -413,7 +443,7 @@ function methods:Save(f)
 	for nodeID = 1, #nodes do
 		data.lookup[nodeID] = nodeID
 	end
-	lookup = data.lookup
+	local lookup = data.lookup
 	local f = file.Open(f,"wb","DATA")
 	f:WriteLong(data.ainet_version)
 	f:WriteLong(data.map_version)
@@ -462,22 +492,30 @@ function methods:SaveAsENT(f)
 	local nodes = data.nodes
 	local nodeID = 1
 	local nodeIDs = {}
-	for _,node in pairs(nodes) do // Put everything in a sequential order
-		nodes[_] = nil
+	local nodeKeys = {}
+	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	table.sort(nodeKeys)
+	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+		local node = nodes[k]
+		nodes[k] = nil
 		nodes[nodeID] = node
-		nodeIDs[_] = nodeID
-		nodeID = nodeID +1
+		nodeIDs[k] = nodeID
+		nodeID = nodeID + 1
 	end
 	local links = data.links
 	local linkID = 1
-	for _,link in pairs(links) do // Update the node IDs in the links and put everything in a sequential order
-		links[_] = nil
+	local linkKeys = {}
+	for k in pairs(links) do table.insert(linkKeys, k) end
+	table.sort(linkKeys)
+	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+		local link = links[k]
+		links[k] = nil
 		links[linkID] = link
 		link.destID = nodeIDs[link.destID]
 		link.srcID = nodeIDs[link.srcID]
 		link.dest = nodes[link.destID]
 		link.src = nodes[link.srcID]
-		linkID = linkID +1
+		linkID = linkID + 1
 	end
 	
 	for i, node in ipairs(nodes) do
@@ -609,7 +647,8 @@ function methods:SaveToVMF(f)
 				   string.find(entityContent, "\"classname\"%s+\"info_node_air\"") or
 				   string.find(entityContent, "\"classname\"%s+\"info_node_hint\"") or
 				   string.find(entityContent, "\"classname\"%s+\"info_node_air_hint\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_hint\"") then
+				   string.find(entityContent, "\"classname\"%s+\"info_hint\"") or
+				   string.find(entityContent, "\"classname\"%s+\"info_node_climb\"") then
 					shouldRemove = true
 				end
 				
@@ -635,22 +674,30 @@ function methods:SaveToVMF(f)
 	local nodeID = 1
 	local hintID = 1
 	local nodeIDs = {}
-	for _,node in pairs(nodes) do // Put everything in a sequential order
-		nodes[_] = nil
+	local nodeKeys = {}
+	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	table.sort(nodeKeys)
+	for _, k in ipairs(nodeKeys) do -- Put everything in a sequential order
+		local node = nodes[k]
+		nodes[k] = nil
 		nodes[nodeID] = node
-		nodeIDs[_] = nodeID
-		nodeID = nodeID +1
+		nodeIDs[k] = nodeID
+		nodeID = nodeID + 1
 	end
 	local links = data.links
 	local linkID = 1
-	for _,link in pairs(links) do // Update the node IDs in the links and put everything in a sequential order
-		links[_] = nil
+	local linkKeys = {}
+	for k in pairs(links) do table.insert(linkKeys, k) end
+	table.sort(linkKeys)
+	for _, k in ipairs(linkKeys) do -- Update the node IDs in the links and put everything in a sequential order
+		local link = links[k]
+		links[k] = nil
 		links[linkID] = link
 		link.destID = nodeIDs[link.destID]
 		link.srcID = nodeIDs[link.srcID]
 		link.dest = nodes[link.destID]
 		link.src = nodes[link.srcID]
-		linkID = linkID +1
+		linkID = linkID + 1
 	end
 	
 	-- Write existing VMF content first.
