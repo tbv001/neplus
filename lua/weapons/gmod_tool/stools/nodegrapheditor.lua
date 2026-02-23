@@ -871,7 +871,8 @@ if(CLIENT) then
 	local cvNodeProjGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_nodeproj_enable",1,false)
 	local cvNodeProjAirNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_air_nodeproj_enable",1,false)
 	local cvJumpLink = CreateClientConVar("cl_nodegraph_tool_jump_link",0,false)
-	local cvNodeRadius = CreateClientConVar("cl_nodegraph_tool_nodeproj_radius",900,false) -- 30 squared
+	local cvNodeRadius = 900 --CreateClientConVar("cl_nodegraph_tool_nodeproj_radius",900,false) -- 30 squared
+	local nodeRadiusSqr = 30
 	local cvPlaceNodeOnGround = CreateClientConVar("cl_nodegraph_tool_place_node_on_ground",0,true)
 	local cvPNOGOffset = CreateClientConVar("cl_nodegraph_tool_place_node_on_ground_offset",0,true)
 	local cvPNOGHull = CreateClientConVar("cl_nodegraph_tool_place_node_on_ground_hull",1,true)
@@ -1077,7 +1078,6 @@ if(CLIENT) then
 		nodeGrid:Insert(nodeID, nodes[nodeID])
 		local numNodes = nodegraph:CountNodes(nodes)
 		local distMin = math.min(cvDist:GetInt(), cvDistLink:GetInt())
-    	local nodeRadius = cvNodeRadius:GetInt()
 		local nearbyNodes = nodeGrid:Query(pos, distMin, nodes)
 		local nodesToClean = {}
 		for otherNodeID, node in pairs(nearbyNodes) do
@@ -1089,11 +1089,11 @@ if(CLIENT) then
 								if cvNodeProjection:GetBool() then
 									local obstructed = false
 									local midPoint = pos + (node.pos - pos) * 0.5
-                                    local checkRadius = (pos - midPoint):Length() + nodeRadius
+                                    local checkRadius = (pos - midPoint):Length() + nodeRadiusSqr
 									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 									for k, nodeB in pairs(obstructionCandidates) do
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-                                            if IsNodeBetween(pos, nodeB.pos, node.pos, nodeRadius) then
+                                            if IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
 												break
 											end
@@ -1112,11 +1112,11 @@ if(CLIENT) then
 								if cvNodeProjection:GetBool() then
 									local obstructed = false
 									local midPoint = pos + (node.pos - pos) * 0.5
-                                    local checkRadius = (pos - midPoint):Length() + nodeRadius
+                                    local checkRadius = (pos - midPoint):Length() + nodeRadiusSqr
 									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 									for k, nodeB in pairs(obstructionCandidates) do
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-                                            if IsNodeBetween(pos, nodeB.pos, node.pos, nodeRadius) then
+                                            if IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
 												break
 											end
@@ -1367,7 +1367,6 @@ if(CLIENT) then
 			end
 			if cvDistLinkGrndNodeGen:GetInt() > 0 then
 				local distMin = math.min(cvDist:GetInt(), cvDistLinkGrndNodeGen:GetInt())
-				local nodeRadius = cvNodeRadius:GetInt()
 				for i = 1, #nodeList do
 					local nodeA = nodeList[i]
 					local neighborCandidates = nodeGrid:Query(nodeA.pos, distMin, nodes)
@@ -1461,7 +1460,6 @@ if(CLIENT) then
 		local nodesToClean = {}
 		local count = 0
 		local distMin = math.min(cvDist:GetInt(), cvDistLinkAirNodeGen:GetInt())
-		local nodeRadius = cvNodeRadius:GetInt()
 		local pl = self:GetOwner()
 		
 		for id, node in pairs(nodes) do
@@ -1832,7 +1830,6 @@ if(CLIENT) then
 	function TOOL:CleanNodegraphLinks(targetNodes)
 		if not nodes then return 0 end
 		local count = 0
-		local nodeRadius = cvNodeRadius:GetInt()
 
 		local nodesToProcess = {}
 		if targetNodes then
@@ -1858,13 +1855,13 @@ if(CLIENT) then
 
 				local obstructed = false
 				local midPoint = node.pos + (destNode.pos - node.pos) * 0.5
-				local checkRadius = (node.pos - midPoint):Length() + nodeRadius
+				local checkRadius = (node.pos - midPoint):Length() + nodeRadiusSqr
 				
 				local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 				for k, nodeB in pairs(obstructionCandidates) do
 					if k ~= id and k ~= destID then
 						if nodeB.type == node.type and nodeB.type == destNode.type then
-							if IsNodeBetween(node.pos, nodeB.pos, destNode.pos, nodeRadius) then
+							if IsNodeBetween(node.pos, nodeB.pos, destNode.pos, cvNodeRadius) then
 								obstructed = true
 								break
 							end
@@ -2868,7 +2865,6 @@ if(CLIENT) then
 			local nodesInRay = {}
 			local isNodeProjection = cvNodeProjection:GetBool()
 			local isTraceHull = cvTraceHull:GetBool()
-			local nodeRadius = cvNodeRadius:GetInt()
 			local queryUsingPlayerPos = cvRenderUsingPlayerPos:GetBool() and pos or origin
 			local nodesToProcess = nodeGrid:Query(queryUsingPlayerPos, distMax, nodes)
 			if self.m_tbEffects then
@@ -2898,11 +2894,11 @@ if(CLIENT) then
 											if isNodeProjection then
 												local obstructed = false
 												local midPoint = origin + (node.pos - origin) * 0.5
-												local checkRadius = (origin - midPoint):Length() + nodeRadius
+												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-														if IsNodeBetween(origin, nodeB.pos, node.pos, nodeRadius) then
+														if IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
 															break
 														end
@@ -2920,11 +2916,11 @@ if(CLIENT) then
 											if isNodeProjection then
 												local obstructed = false
 												local midPoint = origin + (node.pos - origin) * 0.5
-												local checkRadius = (origin - midPoint):Length() + nodeRadius
+												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-															if IsNodeBetween(origin, nodeB.pos, node.pos, nodeRadius) then
+															if IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
 															break
 														end
