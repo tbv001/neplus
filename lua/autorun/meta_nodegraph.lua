@@ -219,8 +219,12 @@ function methods:AddNode(pos,type,yaw,info,hintid)
 		numlinks = 0,
 		hint = hintid or 0
 	}
-	nodes[#nodes + 1] = node
-	local nodeID = #nodes
+	local maxID = 0
+	for k in pairs(nodes) do
+		if k > maxID then maxID = k end
+	end
+	local nodeID = maxID + 1
+	nodes[nodeID] = node
 	local lookup = self:GetLookupTable()
 	if type ~= NODE_TYPE_HINT then lookup[nodeID] = nodeID end
 	return nodeID
@@ -312,10 +316,16 @@ function methods:AddLink(src,dest,move)
 		destID = src,
 		move = move
 	}
-	nodeSrc.link[#nodeSrc.link + 1] = link
-	nodeDest.link[#nodeDest.link + 1] = link1
+	local maxSrcLink = 0
+	for k in pairs(nodeSrc.link) do if k > maxSrcLink then maxSrcLink = k end end
+	nodeSrc.link[maxSrcLink + 1] = link
+	local maxDestLink = 0
+	for k in pairs(nodeDest.link) do if k > maxDestLink then maxDestLink = k end end
+	nodeDest.link[maxDestLink + 1] = link1
 	local _links = self:GetLinks()
-	_links[#_links + 1] = link
+	local maxLink = 0
+	for k in pairs(_links) do if k > maxLink then maxLink = k end end
+	_links[maxLink + 1] = link
 end
 
 function methods:GetLink(src,dest)
