@@ -108,5 +108,5 @@ end
 
 function EFFECT:AddLink(node)
 	if not self.m_tbLinks then self.m_tbLinks = {} end
-	table.insert(self.m_tbLinks, node)
+	self.m_tbLinks[#self.m_tbLinks + 1] = node
 end

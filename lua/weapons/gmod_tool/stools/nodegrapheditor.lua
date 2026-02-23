@@ -181,12 +181,12 @@ if SERVER then
 		end
 	
 		if ent._hint.ID and ent._hint.Position and ent._hint.HintType then
-			table.insert(hintData, {
+			hintData[#hintData + 1] = {
 				NodeID     = ent._hint.ID,
 				Position   = ent._hint.Position,
 				HintType   = ent._hint.HintType,
 				IsInfoHint = (cls == "info_hint")
-			})
+			}
 			ent._hint = nil
 		end
 	end)
@@ -245,7 +245,7 @@ if SERVER then
 					jumps = {}
 				}
 				
-				table.insert(eligibleNavAreas, areaData)
+				eligibleNavAreas[#eligibleNavAreas + 1] = areaData
 				eligibleNavAreaIds[navArea:GetID()] = true
 			end
 		end
@@ -262,10 +262,10 @@ if SERVER then
 					local heightChange = math.abs(navArea:ComputeAdjacentConnectionHeightChange(adjacentArea))
 					
 					if heightChange <= 18 then
-						table.insert(areaData.adjacents, adjacentId)
+						areaData.adjacents[#areaData.adjacents + 1] = adjacentId
 					else
 						if jumpLinksEnabled then
-							table.insert(areaData.jumps, adjacentId)
+							areaData.jumps[#areaData.jumps + 1] = adjacentId
 						end
 					end
 				end
@@ -280,10 +280,10 @@ if SERVER then
 			local areaData = eligibleNavAreas[i]
 			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
 				if #finalAreas < MAX_NODES then
-					table.insert(finalAreas, areaData)
+					finalAreas[#finalAreas + 1] = areaData
 					usedAreaIds[areaData.id] = true
 				else
-					table.insert(remainingAreas, areaData)
+					remainingAreas[#remainingAreas + 1] = areaData
 				end
 			end
 		end
@@ -339,7 +339,7 @@ if SERVER then
 							usedAreaIds[areaData.id] = nil
 							table.remove(finalAreas, i)
 							
-							table.insert(finalAreas, remainingArea)
+							finalAreas[#finalAreas + 1] = remainingArea
 							usedAreaIds[remainingArea.id] = true
 							
 							table.remove(remainingAreas, j)
@@ -1052,7 +1052,7 @@ if(CLIENT) then
 									end
 									if not obstructed then
 										self:AddLink(nodeID, otherNodeID)
-										table.insert(nodesToClean, otherNodeID)
+										nodesToClean[#nodesToClean + 1] = otherNodeID
 									end
 								else
 									self:AddLink(nodeID, otherNodeID)
@@ -1075,7 +1075,7 @@ if(CLIENT) then
 									end
 									if not obstructed then
 										self:AddLink(nodeID, otherNodeID)
-										table.insert(nodesToClean, otherNodeID)
+										nodesToClean[#nodesToClean + 1] = otherNodeID
 									end
 								else
 									self:AddLink(nodeID, otherNodeID)
@@ -1270,8 +1270,8 @@ if(CLIENT) then
 				local nodeID = tool:CreateNodeGen(areaData.pos)
 				if nodeID then
 					areaIDToNodeID[areaData.id] = nodeID
-					table.insert(nodeList, { nodeID = nodeID, pos = areaData.pos })
-					table.insert(nodesToClean, nodeID)
+					nodeList[#nodeList + 1] = { nodeID = nodeID, pos = areaData.pos }
+					nodesToClean[#nodesToClean + 1] = nodeID
 					generatedCount = generatedCount + 1
 				else
 					print("Failed to create node for area ID:", areaData.id)
@@ -1468,7 +1468,7 @@ if(CLIENT) then
 					validPos = node.pos
 				end
 
-				table.insert(groundData, { pos = validPos, parentID = id, links = node.link })
+				groundData[#groundData + 1] = { pos = validPos, parentID = id, links = node.link }
 			end
 		end
 		
@@ -1495,7 +1495,7 @@ if(CLIENT) then
 				if airNode then
 					nodes[airNode].parentGround = data.parentID
 					parentToAir[data.parentID] = airNode
-					table.insert(nodesToClean, airNode)
+					nodesToClean[#nodesToClean + 1] = airNode
 					count = count + 1
 				end
 			end
@@ -1679,7 +1679,7 @@ if(CLIENT) then
 					continue
 				end
 				for z = minZ, maxZ, step do
-					table.insert(candidates, Vector(x, y, z))
+					candidates[#candidates + 1] = Vector(x, y, z)
 				end
 			end
 		end
@@ -1743,7 +1743,7 @@ if(CLIENT) then
 					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset), NODE_TYPE_GROUND, 0, 0, 0)
 					if nodeGenerated then
 						nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
-						table.insert(createdNodes, nodeGenerated)
+						createdNodes[#createdNodes + 1] = nodeGenerated
 						count = count + 1
 					end
 				end
@@ -2838,7 +2838,7 @@ if(CLIENT) then
 						hit = d <= distMaxP
 					end
 					if(hit) then self.m_traceNode = nodeID end
-					if(hit && !self.m_bKeepSelection && self.m_tbEffects[nodeID] && self:IsNodeVisible(nodeID)) then table.insert(nodesInRay,nodeID)
+					if(hit && !self.m_bKeepSelection && self.m_tbEffects[nodeID] && self:IsNodeVisible(nodeID)) then nodesInRay[#nodesInRay + 1] = nodeID
 					else
 						self:CreateEffect(nodeID)
 						if cvDrawPreview:GetBool() then

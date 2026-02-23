@@ -99,7 +99,7 @@ function methods:ParseFile(f,fmode)
 				numlinks = 0,
 				hint = 0
 			}
-			table.insert(nodes,node)
+			nodes[#nodes + 1] = node
 		end
 		local numLinks = f:ReadLong()
 		local links = {}
@@ -110,18 +110,18 @@ function methods:ParseFile(f,fmode)
 			local nodesrc = nodes[srcID +1]
 			local nodedest = nodes[destID +1]
 			if(nodesrc && nodedest) then
-				table.insert(nodesrc.neighbor,nodedest)
+				nodesrc.neighbor[#nodesrc.neighbor + 1] = nodedest
 				nodesrc.numneighbors = nodesrc.numneighbors +1
 				
-				table.insert(nodesrc.link,link)
+				nodesrc.link[#nodesrc.link + 1] = link
 				nodesrc.numlinks = nodesrc.numlinks +1
 				link.src = nodesrc
 				link.srcID = srcID +1
 				
-				table.insert(nodedest.neighbor,nodesrc)
+				nodedest.neighbor[#nodedest.neighbor + 1] = nodesrc
 				nodedest.numneighbors = nodedest.numneighbors +1
 				
-				table.insert(nodedest.link,link)
+				nodedest.link[#nodedest.link + 1] = link
 				nodedest.numlinks = nodedest.numlinks +1
 				link.dest = nodedest
 				link.destID = destID +1
@@ -131,11 +131,11 @@ function methods:ParseFile(f,fmode)
 				moves[i] = f:ReadByte()
 			end
 			link.move = moves
-			table.insert(links,link)
+			links[#links + 1] = link
 		end
 		local lookup = {}
 		for i = 1,numNodes do
-			table.insert(lookup,f:ReadLong())
+			lookup[#lookup + 1] = f:ReadLong()
 		end
 	f:Close()
 	nodegraph.nodes = nodes
@@ -206,7 +206,8 @@ function methods:AddNode(pos,type,yaw,info,hintid)
 		numlinks = 0,
 		hint = hintid or 0
 	}
-	local nodeID = table.insert(nodes,node)
+	nodes[#nodes + 1] = node
+	local nodeID = #nodes
 	local lookup = self:GetLookupTable()
 	if type ~= NODE_TYPE_HINT then lookup[nodeID] = nodeID end
 	return nodeID
@@ -298,9 +299,10 @@ function methods:AddLink(src,dest,move)
 		destID = src,
 		move = move
 	}
-	table.insert(nodeSrc.link,link)
-	table.insert(nodeDest.link,link1)
-	table.insert(self:GetLinks(),link)
+	nodeSrc.link[#nodeSrc.link + 1] = link
+	nodeDest.link[#nodeDest.link + 1] = link1
+	local _links = self:GetLinks()
+	_links[#_links + 1] = link
 end
 
 function methods:GetLink(src,dest)
@@ -341,7 +343,7 @@ function methods:FloodFillZone(startNode, zone)
                 end
                 
                 if linkedNode.zone == AI_NODE_ZONE_UNKNOWN then
-                    table.insert(stack, linkedNode)
+                    stack[#stack + 1] = linkedNode
                 end
             end
         end
@@ -360,7 +362,7 @@ function methods:Save(f)
 	local nodeIDs = {}
 	local tempHints = {}
 	local nodeKeys = {}
-	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	for k in pairs(nodes) do nodeKeys[#nodeKeys + 1] = k end
 	table.sort(nodeKeys)
 	for i = 1, #nodeKeys do	-- Remove info_hint(s) as they are not included in the nodegraph.
 		local k = nodeKeys[i]
@@ -372,7 +374,7 @@ function methods:Save(f)
 		end
 	end
 	nodeKeys = {}
-	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	for k in pairs(nodes) do nodeKeys[#nodeKeys + 1] = k end
 	table.sort(nodeKeys)
 	for i = 1, #nodeKeys do -- Put everything in a sequential order
 		local k = nodeKeys[i]
@@ -385,7 +387,7 @@ function methods:Save(f)
 	local links = data.links
 	local linkID = 1
 	local linkKeys = {}
-	for k in pairs(links) do table.insert(linkKeys, k) end
+	for k in pairs(links) do linkKeys[#linkKeys + 1] = k end
 	table.sort(linkKeys)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
@@ -496,7 +498,7 @@ function methods:SaveAsENT(f)
 	local nodeID = 1
 	local nodeIDs = {}
 	local nodeKeys = {}
-	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	for k in pairs(nodes) do nodeKeys[#nodeKeys + 1] = k end
 	table.sort(nodeKeys)
 	for i = 1, #nodeKeys do -- Put everything in a sequential order
 		local k = nodeKeys[i]
@@ -509,7 +511,7 @@ function methods:SaveAsENT(f)
 	local links = data.links
 	local linkID = 1
 	local linkKeys = {}
-	for k in pairs(links) do table.insert(linkKeys, k) end
+	for k in pairs(links) do linkKeys[#linkKeys + 1] = k end
 	table.sort(linkKeys)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
@@ -683,7 +685,7 @@ function methods:SaveToVMF(f)
 	local hintID = 1
 	local nodeIDs = {}
 	local nodeKeys = {}
-	for k in pairs(nodes) do table.insert(nodeKeys, k) end
+	for k in pairs(nodes) do nodeKeys[#nodeKeys + 1] = k end
 	table.sort(nodeKeys)
 	for i = 1, #nodeKeys do -- Put everything in a sequential order
 		local k = nodeKeys[i]
@@ -696,7 +698,7 @@ function methods:SaveToVMF(f)
 	local links = data.links
 	local linkID = 1
 	local linkKeys = {}
-	for k in pairs(links) do table.insert(linkKeys, k) end
+	for k in pairs(links) do linkKeys[#linkKeys + 1] = k end
 	table.sort(linkKeys)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
