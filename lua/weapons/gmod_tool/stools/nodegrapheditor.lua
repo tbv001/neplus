@@ -304,7 +304,9 @@ if SERVER then
 			local navArea = navmesh.GetNavAreaByID(areaData.id)
 			if not navArea then continue end
 	
-			for _, adjacentArea in pairs(navArea:GetAdjacentAreas()) do
+			local adjacentAreas = navArea:GetAdjacentAreas()
+			for j = 1, #adjacentAreas do
+				local adjacentArea = adjacentAreas[j]
 				local adjacentId = adjacentArea:GetID()
 				
 				if eligibleNavAreaIds[adjacentId] then
@@ -561,7 +563,8 @@ end
 
 function sv_opendoor(a)
 	local x = ents.FindByClass(a)
-	for k,v in pairs(x) do
+	for i = 1, #x do
+		local v = x[i]
 		v:Fire("open")
 	end
 end
@@ -572,7 +575,8 @@ function sv_breakbrush()
 	else	
 
 	local x = ents.FindByClass("func_brush")
-	for k,v in pairs(x) do
+	for i = 1, #x do
+		local v = x[i]
 		v:Fire("break")
 		v:Fire("disable")
 		if string.find(v:GetName(),"door") then
@@ -590,7 +594,8 @@ function sv_breakbrush()
 	end
 	
 	local x = ents.FindByClass("prop_dynamic")
-	for k,v in pairs(x) do
+	for i = 1, #x do
+		local v = x[i]
 		local nm = v:GetName()
 		if string.find(nm,"door") or string.find(nm,"barrier") or nm=="cap2_signs_back_props" then
 			v:Remove()
@@ -1521,7 +1526,8 @@ if(CLIENT) then
 		
 		local parentToAir = {}
 		
-		for _, data in pairs(groundData) do
+		for i = 1, #groundData do
+			local data = groundData[i]
 			local startPos = data.pos
 			local endPos = startPos + Vector(0, 0, cvAirGenHeight:GetInt())
 			local firstTrace = util.TraceLine({
@@ -1549,7 +1555,8 @@ if(CLIENT) then
 		end
 		
 		if cvAirGenGrndLinks:GetBool() then
-			for _, data in pairs(groundData) do
+			for i = 1, #groundData do
+				local data = groundData[i]
 				local parentID = data.parentID
 				local airNodeID = parentToAir[parentID]
 				if airNodeID then
@@ -2531,7 +2538,8 @@ if(CLIENT) then
 					end
 				end
 				if hints and hints.Hints then
-					for k, v in pairs(hints.Hints) do
+					for i = 1, #hints.Hints do
+						local v = hints.Hints[i]
 						local parts = string.Split(v.Position, " ")
 						local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
 						nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
@@ -2781,7 +2789,8 @@ if(CLIENT) then
 							end
 						end
 						if hints and hints.Hints then
-							for k, v in pairs(hints.Hints) do
+							for i = 1, #hints.Hints do
+								local v = hints.Hints[i]
 								local parts = string.Split(v.Position, " ")
 								local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
 								nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))

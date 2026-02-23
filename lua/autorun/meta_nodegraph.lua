@@ -438,8 +438,9 @@ function methods:Save(f)
 			end
 		end
 	end
-	for hintID, hint in pairs(tempHints) do
-		nodeHints.Hints[hintID] = { Position = tostring(hint.pos), HintType = tostring(hint.hint) }
+	for i = 1, #tempHints do
+		local hint = tempHints[i]
+		nodeHints.Hints[i] = { Position = tostring(hint.pos), HintType = tostring(hint.hint) }
 	end
 	if table.IsEmpty(nodeHints.NodeHints) and table.IsEmpty(nodeHints.Hints) then saveHints = false end
 	if table.IsEmpty(nodeHints.NodeHints) then nodeHints.NodeHints = nil end
@@ -503,7 +504,8 @@ function methods:Save(f)
 		f:WriteLong(lookup[i])
 	end
 	f:Close()
-	for _, v in pairs(tempHints) do -- Let's add back our hint nodes.
+	for i = 1, #tempHints do -- Let's add back our hint nodes.
+		local v = tempHints[i]
 		self:AddNode(v.pos, v.type, v.yaw, v.info, v.hint)
 	end
 end
