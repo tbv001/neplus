@@ -915,7 +915,7 @@ if(CLIENT) then
 		hook.Add("RenderScreenspaceEffects",hk,function()
 			local tool = GetTool()
 			if(tool && !cvShowYaw:GetBool()) then
-				local a = math.min((1 -(((CurTime() -1) -tm) /2)) *255,255)
+				local a = math.min((1 -(((CurTime() -1) -tm) * 0.5)) *255,255)
 				if(a < 0) then hook.Remove("RenderScreenspaceEffects",hk)
 				else
 					local pos = tool:GetPreviewOrigin()
@@ -2649,47 +2649,47 @@ if(CLIENT) then
 		
 		local nodeCount = nodegraph and nodegraph:CountNodes(nodes) or 0
 		local hintCount = nodegraph and nodegraph:CountHints(nodes) or 0
-		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. MAX_NODES, "NEPlusFont", width / 2, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width / 2, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. MAX_NODES, "NEPlusFont", width * 0.5, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		
 		if self:GetOwner():KeyDown(IN_RELOAD) then
-			local yOffset = height / 2 - 30
+			local yOffset = height * 0.5 - 30
 
 			-- Title
-			draw.SimpleText("Mass Remove Mode", "NEPlusFont", width / 2, yOffset + 40, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Mass Remove Mode", "NEPlusFont", width * 0.5, yOffset + 40, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Display radius
-			draw.SimpleText("Radius: " .. cvMassRemRadius:GetInt(), "NEPlusFont", width / 2, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Radius: " .. cvMassRemRadius:GetInt(), "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		elseif self.m_selected ~= nil and nodes and nodes[self.m_selected] then
 			local selectedNode = nodes[self.m_selected]
-			local yOffset = height / 2 - 30
+			local yOffset = height * 0.5 - 30
 			
 			-- Index in table
-			draw.SimpleText("Node #" .. self.m_selected, "NEPlusFont", width / 2, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Node #" .. self.m_selected, "NEPlusFont", width * 0.5, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			
 			-- Position
 			local pos = selectedNode.pos or Vector(0, 0, 0)
-			draw.SimpleText("Pos: " .. math.Round(pos.x) .. " " .. math.Round(pos.y) .. " " .. math.Round(pos.z), "NEPlusFont", width / 2, yOffset + 20, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Pos: " .. math.Round(pos.x) .. " " .. math.Round(pos.y) .. " " .. math.Round(pos.z), "NEPlusFont", width * 0.5, yOffset + 20, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Yaw
 			local yaw = selectedNode.yaw or 0
-			draw.SimpleText("Yaw: " .. math.Round(yaw), "NEPlusFont", width / 2, yOffset + 40, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Yaw: " .. math.Round(yaw), "NEPlusFont", width * 0.5, yOffset + 40, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Type
 			local nodeType = (selectedNode.type == 2 and "Ground") or (selectedNode.type == 3 and "Air") or (selectedNode.type == 4 and "Climb") or (selectedNode.type == 7 and "Hint") or "Unknown"
-			draw.SimpleText("Type: " .. nodeType, "NEPlusFont", width / 2, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Type: " .. nodeType, "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			
 			-- Zone
 			local nodeZone = selectedNode.zone < 4 and "N/A" or selectedNode.zone or "N/A"
-			draw.SimpleText("Zone: " .. nodeZone, "NEPlusFont", width / 2, yOffset + 80, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Zone: " .. nodeZone, "NEPlusFont", width * 0.5, yOffset + 80, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 			
 			-- Hint
 			local nodeHint = selectedNode.hint == 0 and "None" or selectedNode.hint or "None"
-			draw.SimpleText("Hint: " .. nodeHint, "NEPlusFont", width / 2, yOffset + 100, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Hint: " .. nodeHint, "NEPlusFont", width * 0.5, yOffset + 100, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Current hull offset
 			local nodeOffset = selectedNode.offset[cvHullView:GetInt()] or 0
-			draw.SimpleText("Hull Offset: " .. math.Round(nodeOffset, 2), "NEPlusFont", width / 2, yOffset + 120, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Hull Offset: " .. math.Round(nodeOffset, 2), "NEPlusFont", width * 0.5, yOffset + 120, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
 	end
 	function TOOL:Think()
