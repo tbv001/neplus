@@ -1,3 +1,53 @@
+local setmetatable = setmetatable
+local math = math
+local next = next
+local pairs = pairs
+local util = util
+local hook = hook
+local tostring = tostring
+local net = net
+local navmesh = navmesh
+local table = table
+local IsValid = IsValid
+local string = string
+local timer = timer
+local game = game
+local file = file
+local collectgarbage = collectgarbage
+local ents = ents
+local RunConsoleCommand = RunConsoleCommand
+local language = language
+local LocalPlayer = LocalPlayer
+local Vector = Vector
+local unpack = unpack
+local AddCSLuaFile = AddCSLuaFile
+local select = select
+local debug = debug
+local CreateClientConVar = CreateClientConVar
+local vgui = vgui
+local MsgN = MsgN
+local ScrW = ScrW
+local ScrH = ScrH
+local notification = notification
+local Material = Material
+local Color = Color
+local cvars = cvars
+local CurTime = CurTime
+local tonumber = tonumber
+local cam = cam
+local EyePos = EyePos
+local EyeAngles = EyeAngles
+local Angle = Angle
+local render = render
+local bit = bit
+local print = print
+local type = type
+local EffectData = EffectData
+local surface = surface
+local draw = draw
+local Derma_Hook = Derma_Hook
+local undo = undo
+
 local NODE_TYPE_GROUND = 2
 local NODE_TYPE_AIR = 3
 local NODE_TYPE_CLIMB = 4
@@ -11,7 +61,6 @@ local MAX_NODES = 8192
 
 local Grid = {}
 Grid.__index = Grid
-local floor = math.floor
 
 function Grid:New(cellSize)
     local grid = setmetatable({}, Grid)
@@ -23,7 +72,7 @@ end
 
 function Grid:GetCellCoords(pos)
     local s = self.invCellSize
-    return floor(pos.x * s), floor(pos.y * s), floor(pos.z * s)
+    return math.floor(pos.x * s), math.floor(pos.y * s), math.floor(pos.z * s)
 end
 
 function Grid:_ensureCell3D(x, y, z)
@@ -100,13 +149,13 @@ function Grid:Query(pos, radius, nodes)
     local radiusSqr = radius * radius
     local invSize = self.invCellSize
 
-    local minX = floor((pos.x - radius) * invSize)
-    local minY = floor((pos.y - radius) * invSize)
-    local minZ = floor((pos.z - radius) * invSize)
+    local minX = math.floor((pos.x - radius) * invSize)
+    local minY = math.floor((pos.y - radius) * invSize)
+    local minZ = math.floor((pos.z - radius) * invSize)
 
-    local maxX = floor((pos.x + radius) * invSize)
-    local maxY = floor((pos.y + radius) * invSize)
-    local maxZ = floor((pos.z + radius) * invSize)
+    local maxX = math.floor((pos.x + radius) * invSize)
+    local maxY = math.floor((pos.y + radius) * invSize)
+    local maxZ = math.floor((pos.z + radius) * invSize)
 
     local cells = self.cells
     local pX, pY, pZ = pos.x, pos.y, pos.z

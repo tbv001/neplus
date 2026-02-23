@@ -1,3 +1,16 @@
+local debug = debug
+local table = table
+local setmetatable = setmetatable
+local game = game
+local file = file
+local MsgN = MsgN
+local Vector = Vector
+local pairs = pairs
+local tostring = tostring
+local util = util
+local math = math
+local string = string
+
 local NODE_TYPE_GROUND = 2
 local NODE_TYPE_AIR = 3
 local NODE_TYPE_CLIMB = 4

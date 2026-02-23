@@ -1,3 +1,9 @@
+local CreateClientConVar = CreateClientConVar
+local Material = Material
+local Color = Color
+local cam = cam
+local render = render
+
 local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez",0,true)
 local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright",1,true)
 local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes",0,true)
