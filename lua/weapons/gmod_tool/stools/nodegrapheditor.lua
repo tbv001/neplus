@@ -751,7 +751,8 @@ else
 	end
 end
 
-local _R = debug.getregistry()
+local Nodegraph = FindMetaTable("Nodegraph")
+
 if(CLIENT) then
 	language.Add("undone_node","Undone Node")
 	local function GetTool()
@@ -2517,7 +2518,7 @@ if(CLIENT) then
 		return tr.Fraction > 0.9
 	end
 	local function nodegraph_recreate_node()
-		local txtnode = _R.Nodegraph.Create("nodegraph/"..game.GetMap()..".txt","DATA")
+		local txtnode = Nodegraph.Create("nodegraph/"..game.GetMap()..".txt","DATA")
 		if txtnode then
 			txtnode.m_nodegraph.map_version = nodegraph.m_nodegraph.map_version
 			
@@ -2767,7 +2768,7 @@ if(CLIENT) then
 				self.m_ePreviewMassRem.DrawMassRem = DrawMassRem
 				if(!nodes) then
 					self:GetMapVersion()
-					nodegraph = _R.Nodegraph.Read()
+					nodegraph = Nodegraph.Read()
 					nodes = nodegraph:GetNodes()
 					links = nodegraph:GetLinks()
 					lookup = nodegraph:GetLookupTable()
@@ -3286,7 +3287,7 @@ if(CLIENT) then
 			local tool = GetTool()
 			if(!tool) then return end
 			if(tool) then tool:ClearEffects() end
-			nodegraph = _R.Nodegraph.Read()
+			nodegraph = Nodegraph.Read()
 			nodes = nodegraph:GetNodes()
 			links = nodegraph:GetLinks()
 			lookup = nodegraph:GetLookupTable()
@@ -3397,7 +3398,7 @@ if(CLIENT) then
 			local tool = GetTool()
 			if(!tool) then return end
 			if(tool) then tool:ClearEffects() end
-			nodegraph = _R.Nodegraph.Read()
+			nodegraph = Nodegraph.Read()
 			nodegraph:Clear()
 			if nodeGrid then nodeGrid:Clear() end
 			nodes = nodegraph:GetNodes()

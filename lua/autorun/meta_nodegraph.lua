@@ -24,27 +24,28 @@ local AINET_VERSION_NUMBER = 37
 local NUM_HULLS = 10
 local MAX_NODES = 8192
 
-local _R = debug.getregistry()
-local meta = {}
-_R.Nodegraph = meta
+local Nodegraph = {}
+RegisterMetaTable("Nodegraph",Nodegraph)
+
 local methods = {}
-meta.__index = methods
-function meta:__tostring()
+Nodegraph.__index = methods
+
+function Nodegraph:__tostring()
 	local str = "Nodegraph [" .. table.Count(self:GetNodes()) .. " Nodes] [" .. table.Count(self:GetLinks()) .. " Links] [AINET " .. self:GetAINetVersion() .. "] [MAP " .. self:GetMapVersion() .. "]"
 	return str
 end
-methods.MetaName = "Nodegraph"
-function _R.Nodegraph.Create(f,fmode)
+
+function Nodegraph.Create(f,fmode)
 	local t = {}
-	setmetatable(t,meta)
+	setmetatable(t,Nodegraph)
 	if(f) then if(!t:ParseFile(f,fmode)) then t:Clear() end
 	else t:Clear() end
 	return t
 end
 
-function _R.Nodegraph.Read(f)
+function Nodegraph.Read(f)
 	if(!f) then f = "maps/graphs/" .. game.GetMap() .. ".ain" end
-	return _R.Nodegraph.Create(f)
+	return Nodegraph.Create(f)
 end
 
 function methods:Clear()
