@@ -17,7 +17,7 @@ git clone https://github.com/tbv001/neplus.git
 
 ## Credits
 
-- [Silverlan](https://steamcommunity.com/id/silverlan)
+- [Silverlan](https://steamcommunity.com/profiles/76561197967919092)
 - [ExboCooope](https://steamcommunity.com/profiles/76561198097054101)
 - [#INVALID_USER](https://steamcommunity.com/profiles/76561198825527396)
 
