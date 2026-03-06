@@ -877,7 +877,7 @@ if(CLIENT) then
 	local cvNodeProjGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_nodeproj_enable",1,false)
 	local cvNodeProjAirNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_air_nodeproj_enable",1,false)
 	local cvJumpLink = CreateClientConVar("cl_nodegraph_tool_jump_link",0,false)
-	local cvNodeRadius = 900 --CreateClientConVar("cl_nodegraph_tool_nodeproj_radius",900,false) -- 30 squared
+	local cvNodeRadius = 900 -- 30 squared
 	local nodeRadiusSqr = 30
 	local cvPlaceNodeOnGround = CreateClientConVar("cl_nodegraph_tool_place_node_on_ground",0,true)
 	local cvPNOGOffset = CreateClientConVar("cl_nodegraph_tool_place_node_on_ground_offset",0,true)
@@ -1235,13 +1235,7 @@ if(CLIENT) then
 		if not nodeID then
 			return nil
 		end
-		--[[
-		if cvUndoableNodes:GetBool() then
-			net.Start("sv_nodegrapheditor_undo_node") // Sending it to the server and then back to the client. Dumb, but no other way.
-				net.WriteUInt(nodeID,14)
-			net.SendToServer()
-		end
-		]]
+
 		return nodeID
 	end
 	function TOOL:RemoveUnlinkedNodes(nodeType)
@@ -2170,7 +2164,6 @@ if(CLIENT) then
 				s = s + d1
 				trLine.start = s
 				trLine.endpos = s + down100
-				--local tr = util.TraceLine(trLine)
 				local tr = util.TraceHull({
 					start = trLine.start,
 					endpos = trLine.endpos,
@@ -3215,7 +3208,6 @@ if(CLIENT) then
 			if file.Exists("data/nodegraph/" .. game.GetMap() .. ".hint.json", "GAME") then
 				notification.AddLegacy("Hint Nodes has been saved as 'data/nodegraph/" .. game.GetMap() .. ".hint.json'.",0,8)
 			end
-			--ShowFirstTimeNotification()
 			notification.AddLegacy("Successfully saved Nodegraph as AIN.",0,8)
 			if(tool) then tool:ClearEffects() end
 		end
