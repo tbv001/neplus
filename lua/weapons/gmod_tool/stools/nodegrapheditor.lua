@@ -57,7 +57,7 @@ local AI_NODE_ZONE_UNKNOWN = 0
 local AI_NODE_ZONE_SOLO = 1
 local AI_NODE_ZONE_UNIVERSAL = 3
 local AI_NODE_FIRST_ZONE = 4
-local MAX_NODES = 8192
+local MAX_NODES = 32768
 
 local Grid = {}
 Grid.__index = Grid

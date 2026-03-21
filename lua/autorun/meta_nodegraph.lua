@@ -22,7 +22,7 @@ local AI_NODE_ZONE_UNIVERSAL = 3
 local AI_NODE_FIRST_ZONE = 4
 local AINET_VERSION_NUMBER = 37
 local NUM_HULLS = 10
-local MAX_NODES = 8192
+local MAX_NODES = 32768
 
 local Nodegraph = {}
 RegisterMetaTable("Nodegraph",Nodegraph)
