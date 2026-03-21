@@ -8,7 +8,9 @@ This patch was made for the `2026.03.16` version of the `x86-64` branch of Garry
 
 ## Disclaimer
 
-This patch is highly experimental and may cause crashes and bugs. Use at your own risk.
+- This patch is highly experimental and may cause crashes and bugs.
+- Be careful to not join VAC-enabled servers with the patch applied.
+- Use at your own risk.
 
 ## Prerequisites
 
