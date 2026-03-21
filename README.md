@@ -2,6 +2,10 @@
 
 An addon for Garry's Mod that adds a tool to allow the user to edit a map's nodegraph.
 
+This is the experimental branch of the Nodegraph Editor+ addon that has increased amount of nodes allowed in a map's nodegraph, including a patch for the `server.dll` file. Issues and bugs may occur, use at your own risk.
+
+Check out the [server_patch](https://github.com/tbv001/neplus/tree/incr-lim/server_patch) directory for more information about the patch.
+
 [Steam Workshop Page](https://steamcommunity.com/sharedfiles/filedetails/?id=3387089606)
 
 ## Dependencies
