@@ -21,9 +21,9 @@ git clone https://github.com/tbv001/neplus.git
 
 ## Credits
 
-- [Silverlan](https://steamcommunity.com/profiles/76561197967919092)
-- [ExboCooope](https://steamcommunity.com/profiles/76561198097054101)
-- [#INVALID_USER](https://steamcommunity.com/profiles/76561198825527396)
+- [Silverlan](https://steamcommunity.com/profiles/76561197967919092), the original creator of the tool.
+- [ExboCooope](https://steamcommunity.com/profiles/76561198097054101), for the improved version of the original tool.
+- [#INVALID_USER](https://steamcommunity.com/profiles/76561198825527396), their findings on different node links, and created [HintNode Loader](https://steamcommunity.com/sharedfiles/filedetails/?id=3432853023).
 
 ## License
 
