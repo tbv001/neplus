@@ -21,10 +21,6 @@ git clone https://github.com/tbv001/neplus.git
 - [ExboCooope](https://steamcommunity.com/profiles/76561198097054101), for the improved version of the original tool.
 - [#INVALID_USER](https://steamcommunity.com/profiles/76561198825527396), their findings on different node links, and created [HintNode Loader](https://steamcommunity.com/sharedfiles/filedetails/?id=3432853023).
 
-## Other Branches
-
-If the nodes limit of 8,192 is not enough for you, check out the [increased limit](https://github.com/tbv001/neplus/tree/incr-lim) experimental branch.
-
 ## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](https://github.com/tbv001/neplus/blob/main/LICENSE) file for details.
