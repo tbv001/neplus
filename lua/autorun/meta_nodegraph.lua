@@ -121,6 +121,7 @@ function methods:ParseFile(f,fmode)
 			local link = {}
 			local srcID = f:ReadShort()
 			local destID = f:ReadShort()
+			if srcID == nil or destID == nil then break end
 			local nodesrc = nodes[srcID +1]
 			local nodedest = nodes[destID +1]
 			if(nodesrc && nodedest) then
@@ -236,23 +237,25 @@ function methods:RemoveLinks(nodeID)
 	local node = nodes[nodeID]
 	if(!node) then return end
 	local links = self:GetLinks()
-	for _,link in pairs(links) do
-		if(link.dest == node) then
-			links[_] = nil
-			if(link.src) then
-				for _,linkSrc in pairs(link.src.link) do
-					if(linkSrc.dest == node || linkSrc.src == node) then
-						link.src.link[_] = nil
-					end
+	local toRemove = {}
+	for k, link in pairs(links) do
+		if link.dest == node or link.src == node then
+			toRemove[k] = link
+		end
+	end
+	for k, link in pairs(toRemove) do
+		links[k] = nil
+		if link.dest == node and link.src then
+			for _, linkSrc in pairs(link.src.link) do
+				if linkSrc.dest == node or linkSrc.src == node then
+					link.src.link[_] = nil
 				end
 			end
-		elseif(link.src == node) then
-			links[_] = nil
-			if(link.dest) then
-				for _,linkSrc in pairs(link.dest.link) do
-					if(linkSrc.dest == node || linkSrc.src == node) then
-						link.dest.link[_] = nil
-					end
+		end
+		if link.src == node and link.dest then
+			for _, linkSrc in pairs(link.dest.link) do
+				if linkSrc.dest == node or linkSrc.src == node then
+					link.dest.link[_] = nil
 				end
 			end
 		end
@@ -299,6 +302,7 @@ function methods:AddLink(src,dest,move)
 	local nodeSrc = nodes[src]
 	local nodeDest = nodes[dest]
 	if(!nodeSrc || !nodeDest) then return end
+	if nodeSrc.type == NODE_TYPE_HINT or nodeDest.type == NODE_TYPE_HINT then return end
 	if(!move) then
 		move = {}
 		for i = 1,NUM_HULLS do move[i] = 1 end
@@ -416,13 +420,19 @@ function methods:Save(f)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
 		local link = links[k]
-		links[k] = nil
-		links[linkID] = link
-		link.destID = nodeIDs[link.destID]
-		link.srcID = nodeIDs[link.srcID]
-		link.dest = nodes[link.destID]
-		link.src = nodes[link.srcID]
-		linkID = linkID + 1
+		local newSrc = nodeIDs[link.srcID]
+		local newDest = nodeIDs[link.destID]
+		if newSrc and newDest then
+			links[k] = nil
+			links[linkID] = link
+			link.destID = newDest
+			link.srcID = newSrc
+			link.dest = nodes[link.destID]
+			link.src = nodes[link.srcID]
+			linkID = linkID + 1
+		else
+			links[k] = nil
+		end
 	end
 
 	-- After putting everything in sequential order, we save hints for corresponding node IDs.
@@ -542,13 +552,19 @@ function methods:SaveAsENT(f)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
 		local link = links[k]
-		links[k] = nil
-		links[linkID] = link
-		link.destID = nodeIDs[link.destID]
-		link.srcID = nodeIDs[link.srcID]
-		link.dest = nodes[link.destID]
-		link.src = nodes[link.srcID]
-		linkID = linkID + 1
+		local newSrc = nodeIDs[link.srcID]
+		local newDest = nodeIDs[link.destID]
+		if newSrc and newDest then
+			links[k] = nil
+			links[linkID] = link
+			link.destID = newDest
+			link.srcID = newSrc
+			link.dest = nodes[link.destID]
+			link.src = nodes[link.srcID]
+			linkID = linkID + 1
+		else
+			links[k] = nil
+		end
 	end
 	
 	for i = 1, #nodes do
@@ -729,13 +745,19 @@ function methods:SaveToVMF(f)
 	for i = 1, #linkKeys do -- Update the node IDs in the links and put everything in a sequential order
 		local k = linkKeys[i]
 		local link = links[k]
-		links[k] = nil
-		links[linkID] = link
-		link.destID = nodeIDs[link.destID]
-		link.srcID = nodeIDs[link.srcID]
-		link.dest = nodes[link.destID]
-		link.src = nodes[link.srcID]
-		linkID = linkID + 1
+		local newSrc = nodeIDs[link.srcID]
+		local newDest = nodeIDs[link.destID]
+		if newSrc and newDest then
+			links[k] = nil
+			links[linkID] = link
+			link.destID = newDest
+			link.srcID = newSrc
+			link.dest = nodes[link.destID]
+			link.src = nodes[link.srcID]
+			linkID = linkID + 1
+		else
+			links[k] = nil
+		end
 	end
 	
 	-- Write existing VMF content first.
