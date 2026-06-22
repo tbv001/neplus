@@ -2,6 +2,10 @@ local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez",0,true)
 local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright",1,true)
 local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes",0,true)
 
+local debugWhiteMat = Material("models/debug/debugwhite")
+local redColor = Color(255,0,0,255)
+local whiteColor = Color(255,255,255,255)
+
 local nodeTypeColors = {
 	[2] = {255, 255, 0},
 	[3] = {255, 255, 0},
@@ -10,15 +14,6 @@ local nodeTypeColors = {
 	[6] = {224, 128, 8},
 	[7] = {255, 255, 255}
 }
-local debugWhiteMat = Material("models/debug/debugwhite")
-local redColor = Color(255,0,0,255)
-local whiteColor = Color(255,255,255,255)
-
-function EFFECT:Init(data)
-	local type = data:GetMagnitude() or 2
-	self.EffectName = "neplus_effect"
-	self:SetType(type)
-end
 
 local nodeTypes = {
 	-- Normal types
@@ -31,6 +26,12 @@ local nodeTypes = {
 	[6] = "models/editor/air_node_hint.mdl",
 	[7] = "models/editor/node_hint.mdl"
 }
+
+function EFFECT:Init(data)
+	local type = data:GetMagnitude() or 2
+	self.EffectName = "neplus_effect"
+	self:SetType(type)
+end
 
 function EFFECT:SetType(type)
 	self.m_type = type

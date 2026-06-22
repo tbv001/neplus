@@ -51,7 +51,7 @@ if CLIENT then
 				args[1] = {
 					StartPos = StartPos,
 					HitPos = HitPos,
-					Normal = (HitPos -StartPos):GetNormal()
+					Normal = (HitPos -StartPos):GetNormalized()
 				}
 			end
 			if(fc == 0) then fc = "LeftClick"
@@ -1780,7 +1780,7 @@ if CLIENT then
 		return tr.Fraction > 0.9
 	end
 	local function nodegraph_recreate_node()
-		local txtnode = Nodegraph.Create("nodegraph/"..game.GetMap()..".txt","DATA")
+		local txtnode = Nodegraph:Create("nodegraph/"..game.GetMap()..".txt", "DATA")
 		if txtnode then
 			txtnode.m_nodegraph.map_version = nodegraph.m_nodegraph.map_version
 
@@ -2030,7 +2030,7 @@ if CLIENT then
 				self.m_ePreviewMassRem.DrawMassRem = DrawMassRem
 				if(not nodes) then
 					self:GetMapVersion()
-					nodegraph = Nodegraph.Read()
+					nodegraph = Nodegraph:Read()
 					nodes = nodegraph:GetNodes()
 					links = nodegraph:GetLinks()
 					lookup = nodegraph:GetLookupTable()
@@ -2549,7 +2549,7 @@ if CLIENT then
 			local tool = GetTool()
 			if(not tool) then return end
 			if(tool) then tool:ClearEffects() end
-			nodegraph = Nodegraph.Read()
+			nodegraph = Nodegraph:Read()
 			nodes = nodegraph:GetNodes()
 			links = nodegraph:GetLinks()
 			lookup = nodegraph:GetLookupTable()
@@ -2660,7 +2660,7 @@ if CLIENT then
 			local tool = GetTool()
 			if(not tool) then return end
 			if(tool) then tool:ClearEffects() end
-			nodegraph = Nodegraph.Read()
+			nodegraph = Nodegraph:Read()
 			nodegraph:Clear()
 			if nodeGrid then nodeGrid:Clear() end
 			nodes = nodegraph:GetNodes()

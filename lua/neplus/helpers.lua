@@ -8,7 +8,7 @@ function IsMapNodeable()
 end
 
 function RecreateNodegraph()
-	local path2 = "maps/graphs/"..game.GetMap()..".ain"
+	local path2 = "maps/graphs/" .. game.GetMap() .. ".ain"
 	local F2 = file.Open(path2, "rb", "GAME")
 	local version1 = 0
 	local size1 = 0
@@ -23,7 +23,7 @@ function RecreateNodegraph()
 
 	local version2 = 0
 	local size2 = 0
-	path2 = "nodegraph/"..game.GetMap()..".txt"
+	path2 = "nodegraph/" .. game.GetMap() .. ".txt"
 	F2 = file.Open(path2, "rb", "DATA")
 	if F2 then
 		F2:ReadLong()
@@ -34,7 +34,7 @@ function RecreateNodegraph()
 		return false
 	end
 
-	return version1~=version2 or size1 ~= size2
+	return version1 ~= version2 or size1 ~= size2
 end
 
 function GenerateNodeableMap()
@@ -57,14 +57,15 @@ function GenerateNodeableMap()
 
 	local searchStr = game.GetMap() .. ".ain"
 	local replaceStr = game.GetMap() .. ".aix"
-	local searchLen  = #searchStr
-	local chunkSize  = 1024 * 64
+	local searchLen = #searchStr
+	local chunkSize = 1024 * 64
 	local buffer = ""
-	local iterations = 0
 
-	while (not inFile:EndOfFile()) do
+	while not inFile:EndOfFile() do
 		local chunk = inFile:Read(chunkSize)
-		if not chunk or chunk == "" then break end
+		if not chunk or chunk == "" then
+			break
+		end
 
 		local data = buffer .. chunk
 		local writeLen = #data - (searchLen - 1)
@@ -75,11 +76,6 @@ function GenerateNodeableMap()
 			buffer = string.sub(data, writeLen + 1)
 		else
 			buffer = data
-		end
-
-		iterations = iterations + 1
-		if iterations % 10 == 0 then
-			collectgarbage("step")
 		end
 	end
 
@@ -101,16 +97,16 @@ local function FireOpenOnEnt(a)
 end
 
 local function RemoveEntities()
-    if game.GetMap() == "pl_thundermountain" then
-        return
-    end
+	if game.GetMap() == "pl_thundermountain" then
+		return
+	end
 
 	local x = ents.FindByClass("func_brush")
 	for i = 1, #x do
 		local v = x[i]
 		v:Fire("break")
 		v:Fire("disable")
-		if string.find(v:GetName(),"door") then
+		if string.find(v:GetName(), "door") then
 			v:Remove()
 		end
 	end
@@ -130,9 +126,8 @@ local function RemoveEntities()
 		local nm = v:GetName()
 		if string.find(nm, "door") or string.find(nm, "barrier") or nm == "cap2_signs_back_props" then
 			v:Remove()
-        end
-    end
-
+		end
+	end
 end
 
 function OpenAndRemoveDoors()
@@ -141,6 +136,6 @@ function OpenAndRemoveDoors()
 	FireOpenOnEnt("prop_door")
 	FireOpenOnEnt("prop_door_rotating")
 	timer.Simple(2, function()
-        RemoveEntities()
-    end)
+		RemoveEntities()
+	end)
 end
