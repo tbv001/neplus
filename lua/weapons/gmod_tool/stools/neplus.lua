@@ -1,8 +1,8 @@
 local Nodegraph = include("neplus/nodegraph.lua")
 local Grid = include("neplus/spatial.lua")
-include("neplus/constants.lua")
-include("neplus/math.lua")
-include("neplus/helpers.lua")
+local Constants = include("neplus/constants.lua")
+local Math = include("neplus/math.lua")
+local Helpers = include("neplus/helpers.lua")
 
 if CLIENT then
 	TOOL.Category = "Map"
@@ -76,12 +76,12 @@ if CLIENT then
 		if(bWarned) then return end
 		bWarned = true
 
-		if RecreateNodegraph() then
+		if Helpers.RecreateNodegraph() then
 			notification.AddLegacy("You can reload the .txt nodegraph in the tool menu to update it.",0,8)
 			notification.AddLegacy("The nodegraph file in 'data/nodegraph/' differs from the map's nodegraph.",1,8)
 		end
 
-		if(IsMapNodeable()) then return end
+		if(Helpers.IsMapNodeable()) then return end
 		local w = 500
 		local pnl = vgui.Create("DFrame")
 		pnl:SetTitle("Nodegraph Editor+ - Map is Unnodeable")
@@ -132,7 +132,7 @@ if CLIENT then
 	local cvDrawClimb = CreateClientConVar("cl_nodegraph_tool_nodes_draw_climb",1,true)
 	local cvDrawHint = CreateClientConVar("cl_nodegraph_tool_nodes_draw_hint",1,true)
 	local cvRenderUsingPlayerPos = CreateClientConVar("cl_nodegraph_tool_render_using_player_pos",0,true)
-	local cvCreateType = CreateClientConVar("cl_nodegraph_tool_node_type",NODE_TYPE_GROUND,false)
+	local cvCreateType = CreateClientConVar("cl_nodegraph_tool_node_type",Constants.NODE_TYPE_GROUND,false)
 	local cvVis = CreateClientConVar("cl_nodegraph_tool_check_visibility",1,true)
 	local cvDrawPreview = CreateClientConVar("cl_nodegraph_tool_draw_preview",1,true)
 	local cvSnap = CreateClientConVar("cl_nodegraph_tool_snap",0,true)
@@ -283,10 +283,10 @@ if CLIENT then
 			for id, node in pairs(nodes) do
 				local nodeType = node.type
 				local enabled =
-					(nodeType == NODE_TYPE_GROUND and cvMassRemGrndNds:GetBool()) or
-					(nodeType == NODE_TYPE_AIR and cvMassRemAirNds:GetBool()) or
-					(nodeType == NODE_TYPE_CLIMB and cvMassRemClimbNds:GetBool()) or
-					(nodeType == NODE_TYPE_HINT and cvMassRemHintNds:GetBool())
+					(nodeType == Constants.NODE_TYPE_GROUND and cvMassRemGrndNds:GetBool()) or
+					(nodeType == Constants.NODE_TYPE_AIR and cvMassRemAirNds:GetBool()) or
+					(nodeType == Constants.NODE_TYPE_CLIMB and cvMassRemClimbNds:GetBool()) or
+					(nodeType == Constants.NODE_TYPE_HINT and cvMassRemHintNds:GetBool())
 				if enabled and node.pos:DistToSqr(origin) <= radiusSqr and self:IsNodeTypeVisible(nodeType) then
 					self:RemoveEffect(id)
 					nodeGrid:Remove(id, node)
@@ -338,10 +338,10 @@ if CLIENT then
 		local h = cvH:GetInt()
 		local pl = self:GetOwner()
 		local pos2 = pos
-		if createType == NODE_TYPE_GROUND then
+		if createType == Constants.NODE_TYPE_GROUND then
 			pos2[3] = pos2[3] + h
 		end
-		if createType == NODE_TYPE_AIR and cvAirNodeHeightOffsetEnable:GetBool() then
+		if createType == Constants.NODE_TYPE_AIR and cvAirNodeHeightOffsetEnable:GetBool() then
 			pos2[3] = self:GetAirNodeHeightOffset(pos2)
 		end
 		local info = cvHint:GetInt()
@@ -358,8 +358,8 @@ if CLIENT then
 		for otherNodeID, node in pairs(nearbyNodes) do
 			if otherNodeID ~= nodeID then
 				if self:IsNodeTypeVisible(node.type) then
-					if node.type == createType and createType ~= NODE_TYPE_CLIMB and createType ~= NODE_TYPE_HINT then
-						if node.type ~= NODE_TYPE_AIR and createType ~= NODE_TYPE_AIR then
+					if node.type == createType and createType ~= Constants.NODE_TYPE_CLIMB and createType ~= Constants.NODE_TYPE_HINT then
+						if node.type ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_AIR then
 							if self:IsLineClear(pos, node.pos) then
 								if cvNodeProjection:GetBool() then
 									local obstructed = false
@@ -368,7 +368,7 @@ if CLIENT then
 									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 									for k, nodeB in pairs(obstructionCandidates) do
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-                                            if IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
+                                            if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
 												break
 											end
@@ -391,7 +391,7 @@ if CLIENT then
 									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 									for k, nodeB in pairs(obstructionCandidates) do
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-                                            if IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
+                                            if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
 												break
 											end
@@ -415,7 +415,7 @@ if CLIENT then
 		end
 		if cvPlaceNodeOnGround:GetBool() then
 			local curNode = nodes[nodeID]
-			if curNode.type == NODE_TYPE_GROUND then
+			if curNode.type == Constants.NODE_TYPE_GROUND then
 				local startPos = curNode.pos
 				local count = 0
 				local succeed = false
@@ -490,16 +490,16 @@ if CLIENT then
 				net.WriteUInt(nodeID,14)
 			net.SendToServer()
 		end
-		if((numNodes == 7950 or numNodes == 8000 or numNodes == 8150) and createType ~= NODE_TYPE_HINT) then notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. MAX_NODES .. ").",0,8)
-		elseif(numNodes == MAX_NODES and createType ~= NODE_TYPE_HINT) then notification.AddLegacy("You have reached the node limit.",0,8) end
+		if((numNodes == 7950 or numNodes == 8000 or numNodes == 8150) and createType ~= Constants.NODE_TYPE_HINT) then notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. Constants.MAX_NODES .. ").",0,8)
+		elseif(numNodes == Constants.MAX_NODES and createType ~= Constants.NODE_TYPE_HINT) then notification.AddLegacy("You have reached the node limit.",0,8) end
 	end
 	function TOOL:CreateNodeGen(pos, nodetype, hint)
 		if not nodetype then
-			nodetype = NODE_TYPE_GROUND
+			nodetype = Constants.NODE_TYPE_GROUND
 		end
 		local h = cvHGrndNodeGen:GetInt()
 		local pos2 = pos
-		if nodetype == NODE_TYPE_GROUND then pos2[3]=pos2[3]+h end
+		if nodetype == Constants.NODE_TYPE_GROUND then pos2[3]=pos2[3]+h end
 		local nodeID = nodegraph:AddNode(pos2, nodetype, cvYaw:GetInt(), 0, hint or 0)
 		if not nodeID then
 			return nil
@@ -512,7 +512,7 @@ if CLIENT then
 		for id, node in pairs(nodes) do
 			if not node.link or table.Count(node.link) <= 0 then
 				if nodeType and node.type ~= nodeType then continue end
-				if node.type == NODE_TYPE_HINT then continue end
+				if node.type == Constants.NODE_TYPE_HINT then continue end
 				nodeGrid:Remove(id, node)
 				nodegraph:RemoveNode(id)
 				count = count + 1
@@ -572,7 +572,7 @@ if CLIENT then
 			end
 
 			for id, node in pairs(nodes) do
-				if node.type == NODE_TYPE_GROUND then
+				if node.type == Constants.NODE_TYPE_GROUND then
 					nodegraph:RemoveNode(id)
 				end
 			end
@@ -584,7 +584,7 @@ if CLIENT then
 			for i = 1, #posTable do
 				local areaData = posTable[i]
 				numNodes = nodegraph:CountNodes(nodes)
-				if numNodes >= MAX_NODES then break end
+				if numNodes >= Constants.MAX_NODES then break end
 				local nodeID = tool:CreateNodeGen(areaData.pos)
 				if nodeID then
 					areaIDToNodeID[areaData.id] = nodeID
@@ -640,7 +640,7 @@ if CLIENT then
 					local nodeA = nodeList[i]
 					local neighborCandidates = nodeGrid:Query(nodeA.pos, distMin, nodes)
 					for otherID, otherNode in pairs(neighborCandidates) do
-						if otherID ~= nodeA.nodeID and otherNode.type == NODE_TYPE_GROUND then
+						if otherID ~= nodeA.nodeID and otherNode.type == Constants.NODE_TYPE_GROUND then
 							if not tool:HasLink(nodeA.nodeID, otherID) then
 								if tool:IsLineClear(nodeA.pos, otherNode.pos, cvStepCheckGrndNodeGen:GetBool(), cvGrndGenTraceHull:GetInt()) then
 									tool:AddLink(nodeA.nodeID, otherID)
@@ -664,7 +664,7 @@ if CLIENT then
 				generatedCount = generatedCount - klzCount
 			end
 
-			local removedUnlinked = tool:RemoveUnlinkedNodes(NODE_TYPE_GROUND)
+			local removedUnlinked = tool:RemoveUnlinkedNodes(Constants.NODE_TYPE_GROUND)
 			generatedCount = generatedCount - removedUnlinked
 
 			tool:BuildNodeGrid()
@@ -732,11 +732,11 @@ if CLIENT then
 		local pl = self:GetOwner()
 
 		for id, node in pairs(nodes) do
-			if node.type == NODE_TYPE_AIR then
+			if node.type == Constants.NODE_TYPE_AIR then
 				nodegraph:RemoveNode(id)
 			end
 
-			if node.type == NODE_TYPE_GROUND then
+			if node.type == Constants.NODE_TYPE_GROUND then
 				local validPos
 				local startPos = node.pos
 				local endPos = startPos - Vector(0, 0, 10000)
@@ -804,11 +804,11 @@ if CLIENT then
 			local validPos = endPos
 			if validPos then
 				local numNodes = nodegraph:CountNodes(nodes)
-				if numNodes >= MAX_NODES then
+				if numNodes >= Constants.MAX_NODES then
 					notification.AddLegacy("Reached the maximum node limit. Can't generate more Air Nodes.",0,8)
 					break
 				end
-				local airNode = self:CreateNodeGen(validPos, NODE_TYPE_AIR, cvAirGenStriderNode:GetBool() and 904 or 0)
+				local airNode = self:CreateNodeGen(validPos, Constants.NODE_TYPE_AIR, cvAirGenStriderNode:GetBool() and 904 or 0)
 				if airNode then
 					nodes[airNode].parentGround = data.parentID
 					parentToAir[data.parentID] = airNode
@@ -855,7 +855,7 @@ if CLIENT then
 				local validPos = nodes[airNodeID].pos
 				local neighborCandidates = nodeGrid:Query(validPos, distMin, nodes)
 				for otherID, otherNode in pairs(neighborCandidates) do
-					if otherID ~= airNodeID and otherNode.type == NODE_TYPE_AIR then
+					if otherID ~= airNodeID and otherNode.type == Constants.NODE_TYPE_AIR then
 						if self:IsLineClear(validPos, otherNode.pos, false, cvAirGenTraceHull:GetBool() and 2 or 0) then
 							self:AddLink(airNodeID, otherID, 4)
 						end
@@ -873,7 +873,7 @@ if CLIENT then
 			count = count - klzCount
 		end
 
-		local removedNodes = self:RemoveUnlinkedNodes(NODE_TYPE_AIR)
+		local removedNodes = self:RemoveUnlinkedNodes(Constants.NODE_TYPE_AIR)
 		count = count - removedNodes
 
 		if count > 0 then
@@ -891,10 +891,10 @@ if CLIENT then
 		self:RemoveLinksWithType(2)
 		self:BuildNodeGrid()
 		for a1, nodea in pairs(nodes) do
-			if nodea.type ~= NODE_TYPE_GROUND then continue end
+			if nodea.type ~= Constants.NODE_TYPE_GROUND then continue end
 			local neighborCandidates = nodeGrid:Query(nodea.pos, distMinLinear, nodes)
 			for b1, nodeb in pairs(neighborCandidates) do
-				if b1 ~= a1 and nodeb and nodeb.type == NODE_TYPE_GROUND then
+				if b1 ~= a1 and nodeb and nodeb.type == Constants.NODE_TYPE_GROUND then
 					local d = nodea.pos:DistToSqr(nodeb.pos)
 					if d <= distMin then
 						local deltaZ = nodeb.pos[3] - nodea.pos[3]
@@ -983,7 +983,7 @@ if CLIENT then
 
 		if cvGrndGenGridRemNodes:GetBool() then
 			for id, node in pairs(nodes) do
-				if node.type == NODE_TYPE_GROUND then
+				if node.type == Constants.NODE_TYPE_GROUND then
 					nodegraph:RemoveNode(id)
 				end
 			end
@@ -1008,7 +1008,7 @@ if CLIENT then
 
 		for _ = 1, #candidates do
 			local pos = candidates[_]
-			if nodegraph:CountNodes(nodes) >= MAX_NODES then
+			if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
 				notification.AddLegacy("Reached node limit. Stopped generation.", 1, 8)
 				break
 			end
@@ -1058,7 +1058,7 @@ if CLIENT then
 
 				local nearby = nodeGrid:Query(placeCheckTr.HitPos, 50, nodes)
 				if table.Count(nearby) == 0 then
-					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset), NODE_TYPE_GROUND, 0, 0, 0)
+					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset), Constants.NODE_TYPE_GROUND, 0, 0, 0)
 					if nodeGenerated then
 						nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
 						createdNodes[#createdNodes + 1] = nodeGenerated
@@ -1079,7 +1079,7 @@ if CLIENT then
 
 				local nearby = nodeGrid:Query(node.pos, step * 1.5, nodes)
 				for otherID, otherNode in pairs(nearby) do
-					if otherID ~= nodeID and otherNode.type == NODE_TYPE_GROUND then
+					if otherID ~= nodeID and otherNode.type == Constants.NODE_TYPE_GROUND then
 						if not self:HasLink(nodeID, otherID) then
 							if self:IsLineClear(node.pos, otherNode.pos, true, 0) then
 								self:AddLink(nodeID, otherID)
@@ -1132,7 +1132,7 @@ if CLIENT then
 				for k, nodeB in pairs(obstructionCandidates) do
 					if k ~= id and k ~= destID then
 						if nodeB.type == node.type and nodeB.type == destNode.type then
-							if IsNodeBetween(node.pos, nodeB.pos, destNode.pos, cvNodeRadius) then
+							if Math.IsNodeBetween(node.pos, nodeB.pos, destNode.pos, cvNodeRadius) then
 								obstructed = true
 								break
 							end
@@ -1208,7 +1208,7 @@ if CLIENT then
 		local pl = self:GetOwner()
 
 		for nodeID, node in pairs(nodes) do
-			if node.type ~= NODE_TYPE_GROUND then continue end
+			if node.type ~= Constants.NODE_TYPE_GROUND then continue end
 
 			for i = 1, 10 do
 				local def = HULL_TYPES[i]
@@ -1260,15 +1260,15 @@ if CLIENT then
 		if not srcNode or not destNode then return end
 
 		-- Some safeguards to avoid unexpected consequences.
-		if srcNode.type == NODE_TYPE_HINT or destNode.type == NODE_TYPE_HINT then return end
-		if (srcNode.type == NODE_TYPE_AIR and destNode.type == NODE_TYPE_CLIMB) or (srcNode.type == NODE_TYPE_CLIMB and destNode.type == NODE_TYPE_AIR) then return end
-		if (srcNode.type == NODE_TYPE_AIR and destNode.type == NODE_TYPE_GROUND) or (srcNode.type == NODE_TYPE_GROUND and destNode.type == NODE_TYPE_AIR) then return end
+		if srcNode.type == Constants.NODE_TYPE_HINT or destNode.type == Constants.NODE_TYPE_HINT then return end
+		if (srcNode.type == Constants.NODE_TYPE_AIR and destNode.type == Constants.NODE_TYPE_CLIMB) or (srcNode.type == Constants.NODE_TYPE_CLIMB and destNode.type == Constants.NODE_TYPE_AIR) then return end
+		if (srcNode.type == Constants.NODE_TYPE_AIR and destNode.type == Constants.NODE_TYPE_GROUND) or (srcNode.type == Constants.NODE_TYPE_GROUND and destNode.type == Constants.NODE_TYPE_AIR) then return end
 
 		local move = {}
 		if movetype == 1 then
 			move = self:CreateMoveArray(1, srcNode.pos, destNode.pos)
 		elseif movetype == 2 then
-			if srcNode.type ~= NODE_TYPE_GROUND or destNode.type ~= NODE_TYPE_GROUND then
+			if srcNode.type ~= Constants.NODE_TYPE_GROUND or destNode.type ~= Constants.NODE_TYPE_GROUND then
 				return
 			end
 			move = self:CreateMoveArray(2)
@@ -1277,17 +1277,17 @@ if CLIENT then
 		elseif movetype == 8 then
 			move = self:CreateMoveArray(8)
 		else
-			if srcNode.type == NODE_TYPE_AIR and destNode.type == NODE_TYPE_AIR then
+			if srcNode.type == Constants.NODE_TYPE_AIR and destNode.type == Constants.NODE_TYPE_AIR then
 				move = self:CreateMoveArray(4, srcNode.pos, destNode.pos)
-			elseif srcNode.type == NODE_TYPE_CLIMB and destNode.type == NODE_TYPE_CLIMB then
+			elseif srcNode.type == Constants.NODE_TYPE_CLIMB and destNode.type == Constants.NODE_TYPE_CLIMB then
 				move = self:CreateMoveArray(8)
 				if cvAutoYaw:GetBool() then
 					if destNode.pos[3] > srcNode.pos[3] then
-						local calcYaw = CalculateYaw(srcNode.pos, destNode.pos)
+						local calcYaw = Math.CalculateYaw(srcNode.pos, destNode.pos)
 						srcNode.yaw = calcYaw
 						destNode.yaw = calcYaw
 					elseif destNode.pos[3] < srcNode.pos[3] then
-						local calcYaw = CalculateYaw(destNode.pos, srcNode.pos)
+						local calcYaw = Math.CalculateYaw(destNode.pos, srcNode.pos)
 						srcNode.yaw = calcYaw
 						destNode.yaw = calcYaw
 					end
@@ -1311,7 +1311,7 @@ if CLIENT then
 	function TOOL:RemoveLinksWithType(linkType)
 		local count = 0
 		for _, node in pairs(nodes) do
-			if node.type == NODE_TYPE_HINT then continue end
+			if node.type == Constants.NODE_TYPE_HINT then continue end
 			for i, link in pairs(node.link) do
 				if table.HasValue(link.move, linkType) then
 					nodegraph:RemoveLink(link.srcID, link.destID)
@@ -1327,12 +1327,12 @@ if CLIENT then
 		return ents.GetAll()[#tbEnts +1] or NULL
 	end
 	function TOOL:IsNodeTypeVisible(type)
-		return (type == NODE_TYPE_GROUND and cvDrawGround:GetBool()) or (type == NODE_TYPE_AIR and cvDrawAir:GetBool()) or (type == NODE_TYPE_CLIMB and cvDrawClimb:GetBool()) or (type == NODE_TYPE_HINT and cvDrawHint:GetBool())
+		return (type == Constants.NODE_TYPE_GROUND and cvDrawGround:GetBool()) or (type == Constants.NODE_TYPE_AIR and cvDrawAir:GetBool()) or (type == Constants.NODE_TYPE_CLIMB and cvDrawClimb:GetBool()) or (type == Constants.NODE_TYPE_HINT and cvDrawHint:GetBool())
 	end
 	function TOOL:PlaceAllNodesToGround()
 		local pl = self:GetOwner()
 		for _, node in pairs(nodes) do
-			if node.type == NODE_TYPE_GROUND then
+			if node.type == Constants.NODE_TYPE_GROUND then
 				local startPos = node.pos
 				local count = 0
 				if cvPNOGHull:GetBool() then
@@ -1583,7 +1583,7 @@ if CLIENT then
 		if(self.m_tbLinks) then
 			for i = 1, #self.m_tbLinks do
 				local nodeLinked = self.m_tbLinks[i]
-				render.DrawBeam(self:GetPos() +offset,nodeLinked.pos +offset,plainLinks and 1 or 10,0,0, (nodeLinked.type == NODE_TYPE_GROUND and colDefault) or (nodeLinked.type == NODE_TYPE_AIR and colNew) or (nodeLinked.type == NODE_TYPE_CLIMB and colNewBlocked) or colDefault)
+				render.DrawBeam(self:GetPos() +offset,nodeLinked.pos +offset,plainLinks and 1 or 10,0,0, (nodeLinked.type == Constants.NODE_TYPE_GROUND and colDefault) or (nodeLinked.type == Constants.NODE_TYPE_AIR and colNew) or (nodeLinked.type == Constants.NODE_TYPE_CLIMB and colNewBlocked) or colDefault)
 			end
 		end
 		if(self.m_bPreview) then
@@ -1670,10 +1670,10 @@ if CLIENT then
 		if(IsValid(self.m_tbEffects[nodeID])) then return end
 		local node = nodes[nodeID]
 		local edata = EffectData()
-		if nodes[nodeID].hint and nodes[nodeID].hint ~= 0 and (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) then
-			if node.type == NODE_TYPE_GROUND then
+		if nodes[nodeID].hint and nodes[nodeID].hint ~= 0 and (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) then
+			if node.type == Constants.NODE_TYPE_GROUND then
 				edata:SetMagnitude(5)
-			elseif node.type == NODE_TYPE_AIR then
+			elseif node.type == Constants.NODE_TYPE_AIR then
 				edata:SetMagnitude(6)
 			end
 		else
@@ -1703,9 +1703,9 @@ if CLIENT then
 		local snap = cvSnap:GetInt()
 		local tr = util.TraceLine(util.GetPlayerTrace(pl))
 		local createType = cvCreateType:GetInt()
-		if(createType ~= NODE_TYPE_AIR and createType ~= NODE_TYPE_HINT) then
+		if(createType ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_HINT) then
 			local pos = SnapToGrid(tr.HitPos,snap)
-			if(createType == NODE_TYPE_CLIMB) then
+			if(createType == Constants.NODE_TYPE_CLIMB) then
 				local dir
 				if(tr.Normal.x > tr.Normal.y) then dir = Vector(tr.Normal.x /math.abs(tr.Normal.x) *-1,0,0)
 				else dir = Vector(0,tr.Normal.y /math.abs(tr.Normal.y) *-1,0) end
@@ -1713,7 +1713,7 @@ if CLIENT then
 			end
 			return pos
 		end
-		local dMax = createType == NODE_TYPE_AIR and cvDistAirNode:GetInt() or cvDistHintNode:GetInt()
+		local dMax = createType == Constants.NODE_TYPE_AIR and cvDistAirNode:GetInt() or cvDistHintNode:GetInt()
 		local d = pos:DistToSqr(tr.HitPos)
 		if(d > dMax * dMax) then return SnapToGrid(pos +tr.Normal *dMax,snap) end
 		return SnapToGrid(tr.HitPos,snap)
@@ -1805,7 +1805,7 @@ if CLIENT then
 						local v = hints.Hints[i]
 						local parts = string.Split(v.Position, " ")
 						local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
-						nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
+						nodegraph:AddNode(pos, Constants.NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
 					end
 				end
 				notification.AddLegacy("Hint Nodes has been loaded from 'nodegraph/".. game.GetMap() .. ".hint.json'.",0,8)
@@ -1822,18 +1822,18 @@ if CLIENT then
 		if table.Count(nodes) == 0 then return end
 
 		for i, node in pairs(nodes) do
-			if node.type ~= NODE_TYPE_HINT then
-				node.zone = AI_NODE_ZONE_UNKNOWN
+			if node.type ~= Constants.NODE_TYPE_HINT then
+				node.zone = Constants.AI_NODE_ZONE_UNKNOWN
 			end
 		end
 		for i, node in pairs(nodes) do
-			if node.type ~= NODE_TYPE_HINT and table.Count(node.link) == 0 then
-				node.zone = AI_NODE_ZONE_SOLO
+			if node.type ~= Constants.NODE_TYPE_HINT and table.Count(node.link) == 0 then
+				node.zone = Constants.AI_NODE_ZONE_SOLO
 			end
 		end
-		local curZone = AI_NODE_FIRST_ZONE
+		local curZone = Constants.AI_NODE_FIRST_ZONE
 		for i, node in pairs(nodes) do
-			if node.type ~= NODE_TYPE_HINT and node.zone == AI_NODE_ZONE_UNKNOWN then
+			if node.type ~= Constants.NODE_TYPE_HINT and node.zone == Constants.AI_NODE_ZONE_UNKNOWN then
 				nodegraph:FloodFillZone(node, curZone)
 				curZone = curZone + 1
 			end
@@ -1854,7 +1854,7 @@ if CLIENT then
 		if handleGround then
 			local zoneCountGround = {}
 			for i, node in pairs(nodes) do
-				if (node.type == NODE_TYPE_GROUND) and node.zone >= AI_NODE_FIRST_ZONE then
+				if (node.type == Constants.NODE_TYPE_GROUND) and node.zone >= Constants.AI_NODE_FIRST_ZONE then
 					zoneCountGround[node.zone] = (zoneCountGround[node.zone] or 0) + 1
 				end
 			end
@@ -1868,7 +1868,7 @@ if CLIENT then
 			end
 			if largestZoneGround then
 				for i, node in pairs(nodes) do
-					if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_CLIMB) and node.zone ~= largestZoneGround then
+					if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_CLIMB) and node.zone ~= largestZoneGround then
 						self:RemoveEffect(i)
 						nodeGrid:Remove(i, node)
 						nodegraph:RemoveNode(i)
@@ -1881,7 +1881,7 @@ if CLIENT then
 		if handleAir then
 			local zoneCountAir = {}
 			for i, node in pairs(nodes) do
-				if node.type == NODE_TYPE_AIR and node.zone >= AI_NODE_FIRST_ZONE then
+				if node.type == Constants.NODE_TYPE_AIR and node.zone >= Constants.AI_NODE_FIRST_ZONE then
 					zoneCountAir[node.zone] = (zoneCountAir[node.zone] or 0) + 1
 				end
 			end
@@ -1895,7 +1895,7 @@ if CLIENT then
 			end
 			if largestZoneAir then
 				for i, node in pairs(nodes) do
-					if node.type == NODE_TYPE_AIR and node.zone ~= largestZoneAir then
+					if node.type == Constants.NODE_TYPE_AIR and node.zone ~= largestZoneAir then
 						self:RemoveEffect(i)
 						nodeGrid:Remove(i, node)
 						nodegraph:RemoveNode(i)
@@ -1926,10 +1926,10 @@ if CLIENT then
 		if not nodes or table.Count(nodes) == 0 then return false end
 
 		for i, node in pairs(nodes) do
-			if node.type == NODE_TYPE_GROUND and not cvSZGround:GetBool() then continue end
-			if node.type == NODE_TYPE_AIR and not cvSZAir:GetBool() then continue end
-			if node.type == NODE_TYPE_CLIMB and not cvSZClimb:GetBool() then continue end
-			if node.type == NODE_TYPE_HINT and not cvSZHint:GetBool() then continue end
+			if node.type == Constants.NODE_TYPE_GROUND and not cvSZGround:GetBool() then continue end
+			if node.type == Constants.NODE_TYPE_AIR and not cvSZAir:GetBool() then continue end
+			if node.type == Constants.NODE_TYPE_CLIMB and not cvSZClimb:GetBool() then continue end
+			if node.type == Constants.NODE_TYPE_HINT and not cvSZHint:GetBool() then continue end
 
 			local zoneMatch = zones[tostring(node.zone)]
 			if (delSelected and zoneMatch) or (not delSelected and not zoneMatch) then
@@ -1966,7 +1966,7 @@ if CLIENT then
 
 		local nodeCount = nodegraph and nodegraph:CountNodes(nodes) or 0
 		local hintCount = nodegraph and nodegraph:CountHints(nodes) or 0
-		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. MAX_NODES, "NEPlusFont", width * 0.5, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. Constants.MAX_NODES, "NEPlusFont", width * 0.5, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 		if self:GetOwner():KeyDown(IN_RELOAD) then
@@ -2022,7 +2022,7 @@ if CLIENT then
 			if(not self.m_tbEffects) then
 				self.m_tbEffects = {}
 				local edata = EffectData()
-				edata:SetMagnitude(NODE_TYPE_GROUND)
+				edata:SetMagnitude(Constants.NODE_TYPE_GROUND)
 				self.m_ePreview = ClientsideEffect("neplus_effect",edata)
 				self.m_ePreview.m_bPreview = true
 				self.m_ePreview.DrawLinks = DrawLinks
@@ -2056,7 +2056,7 @@ if CLIENT then
 								local v = hints.Hints[i]
 								local parts = string.Split(v.Position, " ")
 								local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
-								nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
+								nodegraph:AddNode(pos, Constants.NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
 								loadedHints = loadedHints + 1
 							end
 						end
@@ -2085,7 +2085,7 @@ if CLIENT then
 								else
 									local parts = string.Split(data.Position, " ")
 									local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
-									nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(data.HintType) or 0)
+									nodegraph:AddNode(pos, Constants.NODE_TYPE_HINT, 0, 0, tonumber(data.HintType) or 0)
 									loadedHints = loadedHints + 1
 								end
 							end
@@ -2109,16 +2109,16 @@ if CLIENT then
 			local massRemOrigin = self:GetMassRemOrigin()
 			local h=cvH:GetInt()
 			local createType = cvCreateType:GetInt()
-			if createType == NODE_TYPE_GROUND then
+			if createType == Constants.NODE_TYPE_GROUND then
 				origin[3]=origin[3]+h
 			end
-			if createType == NODE_TYPE_AIR and cvAirNodeHeightOffsetEnable:GetBool() then
+			if createType == Constants.NODE_TYPE_AIR and cvAirNodeHeightOffsetEnable:GetBool() then
 				origin[3]=self:GetAirNodeHeightOffset(origin)
 			end
-			if cvHint:GetInt() ~= 0 and (createType == NODE_TYPE_GROUND or createType == NODE_TYPE_AIR) then
-				if createType == NODE_TYPE_GROUND then
+			if cvHint:GetInt() ~= 0 and (createType == Constants.NODE_TYPE_GROUND or createType == Constants.NODE_TYPE_AIR) then
+				if createType == Constants.NODE_TYPE_GROUND then
 					self.m_ePreview:SetType(5)
-				elseif createType == NODE_TYPE_AIR then
+				elseif createType == Constants.NODE_TYPE_AIR then
 					self.m_ePreview:SetType(6)
 				end
 			else
@@ -2160,8 +2160,8 @@ if CLIENT then
 						self:CreateEffect(nodeID)
 						if cvDrawPreview:GetBool() then
 							if node.pos:DistToSqr(origin) <= distMinLink then
-								if node.type == createType and createType ~= NODE_TYPE_CLIMB and createType ~= NODE_TYPE_HINT then
-									if node.type ~= NODE_TYPE_AIR and createType ~= NODE_TYPE_AIR then
+								if node.type == createType and createType ~= Constants.NODE_TYPE_CLIMB and createType ~= Constants.NODE_TYPE_HINT then
+									if node.type ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_AIR then
 										if self:IsLineClear(origin, node.pos) then
 											if isNodeProjection then
 												local obstructed = false
@@ -2170,7 +2170,7 @@ if CLIENT then
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-														if IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
+														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
 															break
 														end
@@ -2192,7 +2192,7 @@ if CLIENT then
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-															if IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
+															if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
 															break
 														end
@@ -2250,10 +2250,10 @@ if CLIENT then
 		lbl1:SetText("Node Type:")
 		local pCBox1 = vgui.Create("DComboBox",pnl)
 		pCBox1:SetSortItems(false)
-		pCBox1:AddChoice("1. Ground Node",NODE_TYPE_GROUND,selected1 == NODE_TYPE_GROUND)
-		pCBox1:AddChoice("2. Air Node",NODE_TYPE_AIR,selected1 == NODE_TYPE_AIR)
-		pCBox1:AddChoice("3. Climb Node",NODE_TYPE_CLIMB,selected1 == NODE_TYPE_CLIMB)
-		pCBox1:AddChoice("4. Hint Node",NODE_TYPE_HINT,selected1 == NODE_TYPE_HINT)
+		pCBox1:AddChoice("1. Ground Node",Constants.NODE_TYPE_GROUND,selected1 == Constants.NODE_TYPE_GROUND)
+		pCBox1:AddChoice("2. Air Node",Constants.NODE_TYPE_AIR,selected1 == Constants.NODE_TYPE_AIR)
+		pCBox1:AddChoice("3. Climb Node",Constants.NODE_TYPE_CLIMB,selected1 == Constants.NODE_TYPE_CLIMB)
+		pCBox1:AddChoice("4. Hint Node",Constants.NODE_TYPE_HINT,selected1 == Constants.NODE_TYPE_HINT)
 		pCBox1.OnSelect = function(pCBox1,idx,val,data) RunConsoleCommand("cl_nodegraph_tool_node_type",data) end
 		pCBox1:SetWide(170)
 		pnl:AddItem(lbl1,pCBox1)
@@ -2574,7 +2574,7 @@ if CLIENT then
 					for k, v in pairs(hints.Hints) do
 						local parts = string.Split(v.Position, " ")
 						local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
-						nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
+						nodegraph:AddNode(pos, Constants.NODE_TYPE_HINT, 0, 0, tonumber(v.HintType))
 						loadedHints = loadedHints + 1
 					end
 				end
@@ -2603,7 +2603,7 @@ if CLIENT then
 						else
 							local parts = string.Split(data.Position, " ")
 							local pos = Vector(tonumber(parts[1]), tonumber(parts[2]), tonumber(parts[3]))
-							nodegraph:AddNode(pos, NODE_TYPE_HINT, 0, 0, tonumber(data.HintType) or 0)
+							nodegraph:AddNode(pos, Constants.NODE_TYPE_HINT, 0, 0, tonumber(data.HintType) or 0)
 							loadedHints = loadedHints + 1
 						end
 					end
@@ -2678,7 +2678,7 @@ if CLIENT then
 		Depending on the size of the map and your computer's performance, this may freeze your game and could take a while.
 
 		This will create a nodeable map at ]] .. "data/nodegraph/" .. game.GetMap() .. ".bsp.dat."})
-		pnl:AddControl("Label",{Text = "Status: " .. (IsMapNodeable() and "Already Nodeable" or "Not Nodeable")})
+		pnl:AddControl("Label",{Text = "Status: " .. (Helpers.IsMapNodeable() and "Already Nodeable" or "Not Nodeable")})
 
 		local pDump = vgui.Create("DButton",pnl)
 		pDump:SetText("Create Nodeable Map")
@@ -2686,12 +2686,12 @@ if CLIENT then
 			local tool = GetTool()
 			if(not tool) then return end
 
-			if IsMapNodeable() then
+			if Helpers.IsMapNodeable() then
 				notification.AddLegacy("This map is already nodeable.",0,8)
 				return
 			end
 
-			if GenerateNodeableMap() then
+			if Helpers.GenerateNodeableMap() then
 				notification.AddLegacy("Successfully created a nodeable map at data/nodegraph/" .. game.GetMap() .. ".bsp.dat",0,8)
 			else
 				notification.AddLegacy("Failed to create a nodeable map.",1,8)
@@ -2975,7 +2975,7 @@ if SERVER then
 		for i = 1, #eligibleNavAreas do
 			local areaData = eligibleNavAreas[i]
 			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
-				if #finalAreas < MAX_NODES then
+				if #finalAreas < Constants.MAX_NODES then
 					finalAreas[#finalAreas + 1] = areaData
 					usedAreaIds[areaData.id] = true
 				else
@@ -3114,7 +3114,7 @@ if SERVER then
 	net.Receive("clear_door_call", function(len, ply)
 		if not IsValid(ply) then return end
 		if not ply:IsAdmin() then return end
-		OpenAndRemoveDoors()
+		Helpers.OpenAndRemoveDoors()
 	end)
 
 	net.Receive("sv_nodegrapheditor_undo_node",function(len,pl)

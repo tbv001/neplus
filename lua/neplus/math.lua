@@ -1,4 +1,6 @@
-function IsNodeBetween(a_pos, b_pos, c_pos, threshold)
+local Math = {}
+
+function Math.IsNodeBetween(a_pos, b_pos, c_pos, threshold)
 	local ax, ay, az = a_pos.x, a_pos.y, a_pos.z
 	local bx, by, bz = b_pos.x, b_pos.y, b_pos.z
 	local cx, cy, cz = c_pos.x, c_pos.y, c_pos.z
@@ -34,7 +36,7 @@ function IsNodeBetween(a_pos, b_pos, c_pos, threshold)
 	return dist_sqr <= threshold
 end
 
-function CalculateYaw(startPos, endPos)
+function Math.CalculateYaw(startPos, endPos)
 	local direction = endPos - startPos
 	local yawRadians = math.atan2(direction.y, direction.x)
 	local yawDegrees = math.deg(yawRadians)
@@ -42,3 +44,5 @@ function CalculateYaw(startPos, endPos)
 
 	return yawDegrees
 end
+
+return Math

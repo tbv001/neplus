@@ -1,4 +1,6 @@
-function IsMapNodeable()
+local Helpers = {}
+
+function Helpers.IsMapNodeable()
 	local path = "maps/graphs/" .. game.GetMap() .. ".ain"
 	if file.Exists(path, "BSP") then
 		return false
@@ -7,7 +9,7 @@ function IsMapNodeable()
 	return true
 end
 
-function RecreateNodegraph()
+function Helpers.RecreateNodegraph()
 	local path2 = "maps/graphs/" .. game.GetMap() .. ".ain"
 	local F2 = file.Open(path2, "rb", "GAME")
 	local version1 = 0
@@ -37,7 +39,7 @@ function RecreateNodegraph()
 	return version1 ~= version2 or size1 ~= size2
 end
 
-function GenerateNodeableMap()
+function Helpers.GenerateNodeableMap()
 	local bspPath = "maps/" .. game.GetMap() .. ".bsp"
 	local inFile = file.Open(bspPath, "rb", "GAME")
 	if not inFile then
@@ -130,7 +132,7 @@ local function RemoveEntities()
 	end
 end
 
-function OpenAndRemoveDoors()
+function Helpers.OpenAndRemoveDoors()
 	FireOpenOnEnt("func_door")
 	FireOpenOnEnt("func_door_rotating")
 	FireOpenOnEnt("prop_door")
@@ -139,3 +141,5 @@ function OpenAndRemoveDoors()
 		RemoveEntities()
 	end)
 end
+
+return Helpers

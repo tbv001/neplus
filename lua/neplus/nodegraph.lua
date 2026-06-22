@@ -1,4 +1,4 @@
-include("neplus/constants.lua")
+local Constants = include("neplus/constants.lua")
 
 local Nodegraph = {}
 Nodegraph.__index = Nodegraph
@@ -25,7 +25,7 @@ end
 function Nodegraph:Clear()
 	local mapVersion = self.m_nodegraph and self.m_nodegraph.map_version or 0
 	self.m_nodegraph = {
-		ainet_version = AINET_VERSION_NUMBER,
+		ainet_version = Constants.AINET_VERSION_NUMBER,
 		map_version = mapVersion,
 		nodes = {},
 		links = {},
@@ -47,14 +47,14 @@ function Nodegraph:ParseFile(filePath, gamePath)
 		map_version = mapVersion
 	}
 
-	if ainetVersion ~= AINET_VERSION_NUMBER then
+	if ainetVersion ~= Constants.AINET_VERSION_NUMBER then
 		MsgN("Unknown graph file")
 		fileHandle:Close()
 		return
 	end
 
 	local numNodes = fileHandle:ReadLong()
-	if numNodes > MAX_NODES or numNodes < 0 then
+	if numNodes > Constants.MAX_NODES or numNodes < 0 then
 		MsgN("Graph file has an unexpected amount of nodes")
 		fileHandle:Close()
 		return
@@ -66,7 +66,7 @@ function Nodegraph:ParseFile(filePath, gamePath)
 		local yaw = fileHandle:ReadFloat()
 		local hullOffsets = {}
 
-		for j = 1, NUM_HULLS do
+		for j = 1, Constants.NUM_HULLS do
 			hullOffsets[j] = fileHandle:ReadFloat()
 		end
 
@@ -124,7 +124,7 @@ function Nodegraph:ParseFile(filePath, gamePath)
 		end
 
 		local moveFlags = {}
-		for j = 1, NUM_HULLS do
+		for j = 1, Constants.NUM_HULLS do
 			moveFlags[j] = fileHandle:ReadByte()
 		end
 
@@ -166,7 +166,7 @@ end
 function Nodegraph:CountNodes(tbl)
 	local count = 0
 	for _, node in pairs(tbl) do
-		if node.type ~= NODE_TYPE_HINT then
+		if node.type ~= Constants.NODE_TYPE_HINT then
 			count = count + 1
 		end
 	end
@@ -177,7 +177,7 @@ end
 function Nodegraph:CountHints(tbl)
 	local count = 0
 	for _, node in pairs(tbl) do
-		if node.type == NODE_TYPE_HINT then
+		if node.type == Constants.NODE_TYPE_HINT then
 			count = count + 1
 		end
 	end
@@ -186,15 +186,15 @@ function Nodegraph:CountHints(tbl)
 end
 
 function Nodegraph:AddNode(pos, type, yaw, info, hintid)
-	type = type or NODE_TYPE_GROUND
+	type = type or Constants.NODE_TYPE_GROUND
 	local nodes = self:GetNodes()
 	local numNodes = self:CountNodes(nodes)
-	if numNodes == MAX_NODES and type ~= NODE_TYPE_HINT then
+	if numNodes == Constants.MAX_NODES and type ~= Constants.NODE_TYPE_HINT then
 		return false
 	end
 
 	local offset = {}
-	for i = 1, NUM_HULLS do
+	for i = 1, Constants.NUM_HULLS do
 		offset[i] = 0
 	end
 
@@ -204,7 +204,7 @@ function Nodegraph:AddNode(pos, type, yaw, info, hintid)
 		offset = offset,
 		type = type,
 		info = info or 0,
-		zone = AI_NODE_ZONE_UNKNOWN,
+		zone = Constants.AI_NODE_ZONE_UNKNOWN,
 		neighbor = {},
 		numneighbors = 0,
 		link = {},
@@ -222,7 +222,7 @@ function Nodegraph:AddNode(pos, type, yaw, info, hintid)
 	local nodeID = maxID + 1
 	nodes[nodeID] = node
 	local lookup = self:GetLookupTable()
-	if type ~= NODE_TYPE_HINT then
+	if type ~= Constants.NODE_TYPE_HINT then
 		lookup[nodeID] = nodeID
 	end
 
@@ -321,13 +321,13 @@ function Nodegraph:AddLink(src, dest, move)
 		return
 	end
 
-	if nodeSrc.type == NODE_TYPE_HINT or nodeDest.type == NODE_TYPE_HINT then
+	if nodeSrc.type == Constants.NODE_TYPE_HINT or nodeDest.type == Constants.NODE_TYPE_HINT then
 		return
 	end
 
 	if not move then
 		move = {}
-		for i = 1, NUM_HULLS do
+		for i = 1, Constants.NUM_HULLS do
 			move[i] = 1
 		end
 	end
@@ -403,7 +403,7 @@ function Nodegraph:HasLink(src, dest)
 end
 
 function Nodegraph:FloodFillZone(startNode, zone)
-	if startNode.zone ~= AI_NODE_ZONE_UNKNOWN then
+	if startNode.zone ~= Constants.AI_NODE_ZONE_UNKNOWN then
 		return
 	end
 
@@ -411,7 +411,7 @@ function Nodegraph:FloodFillZone(startNode, zone)
 
 	while #stack > 0 do
 		local node = table.remove(stack)
-		if node.zone == AI_NODE_ZONE_UNKNOWN then
+		if node.zone == Constants.AI_NODE_ZONE_UNKNOWN then
 			node.zone = zone
 
 			for _, link in pairs(node.link) do
@@ -422,7 +422,7 @@ function Nodegraph:FloodFillZone(startNode, zone)
 					linkedNode = link.dest
 				end
 
-				if linkedNode.zone == AI_NODE_ZONE_UNKNOWN then
+				if linkedNode.zone == Constants.AI_NODE_ZONE_UNKNOWN then
 					stack[#stack + 1] = linkedNode
 				end
 			end
@@ -454,7 +454,7 @@ function Nodegraph:Save(filePath)
 		local k = nodeKeys[i]
 		local node = nodes[k]
 
-		if node.type == NODE_TYPE_HINT then
+		if node.type == Constants.NODE_TYPE_HINT then
 			tempHints[hintID] = node
 			nodes[k] = nil
 			hintID = hintID + 1
@@ -548,18 +548,18 @@ function Nodegraph:Save(filePath)
 
 	-- Initialize zones.
 	for _, node in pairs(nodes) do
-		node.zone = AI_NODE_ZONE_UNKNOWN
+		node.zone = Constants.AI_NODE_ZONE_UNKNOWN
 	end
 
 	for _, node in pairs(nodes) do
 		if table.Count(node.link) == 0 then
-			node.zone = AI_NODE_ZONE_SOLO
+			node.zone = Constants.AI_NODE_ZONE_SOLO
 		end
 	end
 
-	local curZone = AI_NODE_FIRST_ZONE
+	local curZone = Constants.AI_NODE_FIRST_ZONE
 	for _, node in pairs(nodes) do
-		if node.zone == AI_NODE_ZONE_UNKNOWN then
+		if node.zone == Constants.AI_NODE_ZONE_UNKNOWN then
 			self:FloodFillZone(node, curZone)
 			curZone = curZone + 1
 		end
@@ -589,12 +589,12 @@ function Nodegraph:Save(filePath)
 
 		fileHandle:WriteFloat(node.yaw)
 
-		for j = 1, NUM_HULLS do
+		for j = 1, Constants.NUM_HULLS do
 			fileHandle:WriteFloat(node.offset[j])
 		end
 
 		fileHandle:WriteByte(node.type)
-		node.info = node.type == NODE_TYPE_CLIMB and 2 or 0
+		node.info = node.type == Constants.NODE_TYPE_CLIMB and 2 or 0
 		fileHandle:WriteUShort(node.info)
 		fileHandle:WriteShort(node.zone)
 	end
@@ -607,7 +607,7 @@ function Nodegraph:Save(filePath)
 		fileHandle:WriteShort(link.srcID - 1)
 		fileHandle:WriteShort(link.destID - 1)
 
-		for j = 1, NUM_HULLS do
+		for j = 1, Constants.NUM_HULLS do
 			fileHandle:WriteByte(link.move[j])
 		end
 	end
@@ -690,14 +690,14 @@ function Nodegraph:SaveAsENT(filePath)
 	for i = 1, #nodes do
 		local node = nodes[i]
 
-		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
+		if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) and node.hint == 0 then
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
 			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 
-			if node.type == NODE_TYPE_AIR then
+			if node.type == Constants.NODE_TYPE_AIR then
 				fileHandle:Write("\t\"classname\" \"info_node_air\"\n")
 			else
 				fileHandle:Write("\t\"classname\" \"info_node\"\n")
@@ -716,14 +716,14 @@ function Nodegraph:SaveAsENT(filePath)
 			fileHandle:Write("\t\"MinimumState\" \"1\"\n")
 			fileHandle:Write("\t\"MaximumState\" \"3\"\n")
 
-			if node.type == NODE_TYPE_CLIMB then
+			if node.type == Constants.NODE_TYPE_CLIMB then
 				local success = false
 
 				for j = 1, #node.link do
 					local link = node.link[j]
 
 					if link.move and table.HasValue(link.move, 8) then
-						if nodes[link.destID] and nodes[link.destID].type ~= NODE_TYPE_CLIMB then
+						if nodes[link.destID] and nodes[link.destID].type ~= Constants.NODE_TYPE_CLIMB then
 							continue
 						end
 
@@ -736,7 +736,7 @@ function Nodegraph:SaveAsENT(filePath)
 				if not success then
 					fileHandle:Write("\t\"TargetNode\" \"-1\"\n")
 				end
-			elseif node.type == NODE_TYPE_GROUND and node.hint == 901 then
+			elseif node.type == Constants.NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
 
 				for j = 1, #node.link do
@@ -762,11 +762,11 @@ function Nodegraph:SaveAsENT(filePath)
 				fileHandle:Write("\t\"TargetNode\" \"-1\"\n")
 			end
 
-			if node.type == NODE_TYPE_GROUND then
+			if node.type == Constants.NODE_TYPE_GROUND then
 				fileHandle:Write("\t\"classname\" \"info_node_hint\"\n")
-			elseif node.type == NODE_TYPE_AIR then
+			elseif node.type == Constants.NODE_TYPE_AIR then
 				fileHandle:Write("\t\"classname\" \"info_node_air_hint\"\n")
-			elseif node.type == NODE_TYPE_CLIMB then
+			elseif node.type == Constants.NODE_TYPE_CLIMB then
 				fileHandle:Write("\t\"classname\" \"info_node_climb\"\n")
 			else
 				fileHandle:Write("\t\"classname\" \"info_hint\"\n")
@@ -915,14 +915,14 @@ function Nodegraph:SaveToVMF(filePath)
 	for i = 1, #nodes do
 		local node = nodes[i]
 
-		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
+		if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) and node.hint == 0 then
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
 			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 
-			if node.type == NODE_TYPE_AIR then
+			if node.type == Constants.NODE_TYPE_AIR then
 				fileHandle:Write("\t\"classname\" \"info_node_air\"\n")
 			else
 				fileHandle:Write("\t\"classname\" \"info_node\"\n")
@@ -941,14 +941,14 @@ function Nodegraph:SaveToVMF(filePath)
 			fileHandle:Write("\t\"MinimumState\" \"1\"\n")
 			fileHandle:Write("\t\"MaximumState\" \"3\"\n")
 
-			if node.type == NODE_TYPE_CLIMB then
+			if node.type == Constants.NODE_TYPE_CLIMB then
 				local success = false
 
 				for j = 1, #node.link do
 					local link = node.link[j]
 
 					if link.move and table.HasValue(link.move, 8) then
-						if nodes[link.destID] and nodes[link.destID].type ~= NODE_TYPE_CLIMB then
+						if nodes[link.destID] and nodes[link.destID].type ~= Constants.NODE_TYPE_CLIMB then
 							continue
 						end
 
@@ -961,7 +961,7 @@ function Nodegraph:SaveToVMF(filePath)
 				if not success then
 					fileHandle:Write("\t\"TargetNode\" \"-1\"\n")
 				end
-			elseif node.type == NODE_TYPE_GROUND and node.hint == 901 then
+			elseif node.type == Constants.NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
 
 				for j = 1, #node.link do
@@ -987,11 +987,11 @@ function Nodegraph:SaveToVMF(filePath)
 				fileHandle:Write("\t\"TargetNode\" \"-1\"\n")
 			end
 
-			if node.type == NODE_TYPE_GROUND then
+			if node.type == Constants.NODE_TYPE_GROUND then
 				fileHandle:Write("\t\"classname\" \"info_node_hint\"\n")
-			elseif node.type == NODE_TYPE_AIR then
+			elseif node.type == Constants.NODE_TYPE_AIR then
 				fileHandle:Write("\t\"classname\" \"info_node_air_hint\"\n")
-			elseif node.type == NODE_TYPE_CLIMB then
+			elseif node.type == Constants.NODE_TYPE_CLIMB then
 				fileHandle:Write("\t\"classname\" \"info_node_climb\"\n")
 			else
 				fileHandle:Write("\t\"classname\" \"info_hint\"\n")
