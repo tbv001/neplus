@@ -1,6 +1,6 @@
-local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez",0,true)
-local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright",1,true)
-local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes",0,true)
+local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez", "0", true)
+local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright", "1", true)
+local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes", "0", true)
 
 local debugWhiteMat = Material("models/debug/debugwhite")
 local redColor = Color(255,0,0,255)
@@ -49,9 +49,6 @@ end
 
 function EFFECT:GetNode()
 	return self.m_node,self.m_nodeID
-end
-
-function EFFECT:OnRemove()
 end
 
 function EFFECT:Think()
