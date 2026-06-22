@@ -1,685 +1,12 @@
-local setmetatable = setmetatable
-local math = math
-local next = next
-local pairs = pairs
-local util = util
-local hook = hook
-local tostring = tostring
-local net = net
-local navmesh = navmesh
-local table = table
-local IsValid = IsValid
-local string = string
-local timer = timer
-local game = game
-local file = file
-local collectgarbage = collectgarbage
-local ents = ents
-local RunConsoleCommand = RunConsoleCommand
-local language = language
-local LocalPlayer = LocalPlayer
-local Vector = Vector
-local unpack = unpack
-local AddCSLuaFile = AddCSLuaFile
-local select = select
-local debug = debug
-local CreateClientConVar = CreateClientConVar
-local vgui = vgui
-local MsgN = MsgN
-local ScrW = ScrW
-local ScrH = ScrH
-local notification = notification
-local Material = Material
-local Color = Color
-local cvars = cvars
-local CurTime = CurTime
-local tonumber = tonumber
-local cam = cam
-local EyePos = EyePos
-local EyeAngles = EyeAngles
-local Angle = Angle
-local render = render
-local bit = bit
-local print = print
-local type = type
-local EffectData = EffectData
-local surface = surface
-local draw = draw
-local Derma_Hook = Derma_Hook
-local undo = undo
+local Nodegraph = include("neplus/nodegraph.lua")
+local Grid = include("neplus/spatial.lua")
+include("neplus/constants.lua")
+include("neplus/math.lua")
+include("neplus/helpers.lua")
 
-local NODE_TYPE_GROUND = 2
-local NODE_TYPE_AIR = 3
-local NODE_TYPE_CLIMB = 4
-local NODE_TYPE_WATER = 5
-local NODE_TYPE_HINT = 7
-local AI_NODE_ZONE_UNKNOWN = 0
-local AI_NODE_ZONE_SOLO = 1
-local AI_NODE_ZONE_UNIVERSAL = 3
-local AI_NODE_FIRST_ZONE = 4
-local MAX_NODES = 8192
-
-local Grid = {}
-Grid.__index = Grid
-
-function Grid:New(cellSize)
-    local grid = setmetatable({}, Grid)
-    grid.cellSize = cellSize or 1024
-    grid.invCellSize = 1 / grid.cellSize
-    grid.cells = {}
-    return grid
-end
-
-function Grid:GetCellCoords(pos)
-    local s = self.invCellSize
-    return math.floor(pos.x * s), math.floor(pos.y * s), math.floor(pos.z * s)
-end
-
-function Grid:_ensureCell3D(x, y, z)
-    local cx = self.cells[x]
-    if cx == nil then
-        cx = {}
-        self.cells[x] = cx
-    end
-    local cy = cx[y]
-    if cy == nil then
-        cy = {}
-        cx[y] = cy
-    end
-    local cz = cy[z]
-    if cz == nil then
-        cz = {}
-        cy[z] = cz
-    end
-    return cz, cy, cx
-end
-
-function Grid:Insert(nodeID, node)
-    if not node then return end
-    local pos = node.pos
-    if not pos then return end
-
-    local x, y, z = self:GetCellCoords(pos)
-    local cz = self:_ensureCell3D(x, y, z)
-    cz[nodeID] = true
-
-    node.cx, node.cy, node.cz = x, y, z
-end
-
-function Grid:Remove(nodeID, node)
-    if not node then return end
-    local x, y, z = node.cx, node.cy, node.cz
-    if x == nil then
-        node.cx, node.cy, node.cz = nil, nil, nil
-        return
-    end
-
-    local cells = self.cells
-    local cx = cells[x]
-    if not cx then
-        node.cx, node.cy, node.cz = nil, nil, nil
-        return
-    end
-    local cy = cx[y]
-    if not cy then
-        node.cx, node.cy, node.cz = nil, nil, nil
-        return
-    end
-    local cz = cy[z]
-    if cz then
-        cz[nodeID] = nil
-        if next(cz) == nil then
-            cy[z] = nil
-            if next(cy) == nil then
-                cx[y] = nil
-                if next(cx) == nil then
-                    cells[x] = nil
-                end
-            end
-        end
-    end
-
-    node.cx, node.cy, node.cz = nil, nil, nil
-end
-
-function Grid:Query(pos, radius, nodes)
-	if not pos or not radius or radius <= 0 or not nodes then return {} end
-    local result = {}
-
-    local radiusSqr = radius * radius
-    local invSize = self.invCellSize
-
-    local minX = math.floor((pos.x - radius) * invSize)
-    local minY = math.floor((pos.y - radius) * invSize)
-    local minZ = math.floor((pos.z - radius) * invSize)
-
-    local maxX = math.floor((pos.x + radius) * invSize)
-    local maxY = math.floor((pos.y + radius) * invSize)
-    local maxZ = math.floor((pos.z + radius) * invSize)
-
-    local cells = self.cells
-    local pX, pY, pZ = pos.x, pos.y, pos.z
-
-    for x = minX, maxX do
-        local cx = cells[x]
-        if cx then
-            for y = minY, maxY do
-                local cy = cx[y]
-                if cy then
-                    for z = minZ, maxZ do
-                        local cz = cy[z]
-                        if cz then
-                            for nodeID in pairs(cz) do
-                                local n = nodes[nodeID]
-                                if n then
-                                    local np = n.pos
-                                    if np then
-                                        local dx = np.x - pX
-                                        local dy = np.y - pY
-                                        local dz = np.z - pZ
-                                        if (dx*dx + dy*dy + dz*dz) <= radiusSqr then
-                                            result[nodeID] = n
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return result
-end
-
-function Grid:Build(nodes)
-	if not nodes then return end
-    self:Clear()
-    for id, node in pairs(nodes) do
-        self:Insert(id, node)
-    end
-end
-
-function Grid:Clear()
-    self.cells = {}
-end
-
-if SERVER then
-	util.AddNetworkString("nodegraph_gen_server")
-	util.AddNetworkString("nodegraph_gen_client")
-	util.AddNetworkString("nodegraph_cleareffects_client")
-	util.AddNetworkString("nodegraph_get_hint_server")
-	util.AddNetworkString("nodegraph_get_hint_client")
-	util.AddNetworkString("nodegraph_getmapversion_server")
-	util.AddNetworkString("nodegraph_getmapversion_client")
-
-	local hintData = {}
-	hook.Add("EntityKeyValue", "NEPlusGetAllNodeHints", function(ent, key, value)
-		local cls = ent:GetClass()
-		if cls ~= "info_hint" and cls ~= "info_node_hint" and cls ~= "info_node_air_hint" then return end
-	
-		ent._hint = ent._hint or {ID = (cls == "info_hint" and ent:EntIndex() or nil)}
-	
-		if key == "nodeid" then
-			ent._hint.ID = tostring(value)
-		elseif key == "origin" then
-			ent._hint.Position = value
-		elseif key == "hinttype" then
-			ent._hint.HintType = value
-		end
-	
-		if ent._hint.ID and ent._hint.Position and ent._hint.HintType then
-			hintData[#hintData + 1] = {
-				NodeID     = ent._hint.ID,
-				Position   = ent._hint.Position,
-				HintType   = ent._hint.HintType,
-				IsInfoHint = (cls == "info_hint")
-			}
-			ent._hint = nil
-		end
-	end)
-
-	hook.Add("PlayerDeath", "NEPlusPlayerDeath", function(ply, infl, att)
-		net.Start("nodegraph_cleareffects_client")
-		net.Send(ply)
-	end)
-
-	local function getAllNavAreas(genSettings, ply)
-		local eligibleNavAreas = {}
-		local eligibleNavAreaIds = {}
-		local minimalAreaSize = genSettings.NavAreaSize
-		local crouchEnabled = genSettings.CrouchAreas
-		local jumpEnabled = genSettings.JumpAreas
-		local waterEnabled = genSettings.WaterAreas
-		local jumpLinksEnabled = genSettings.GenJumpLinks
-	
-		local function isAreaEligible(navArea)
-			if navArea:HasAttributes(NAV_MESH_INVALID) or navArea:IsBlocked() then
-				return false
-			end
-
-			if not crouchEnabled then
-				if navArea:HasAttributes(NAV_MESH_CROUCH) then
-					return false
-				end
-			end
-
-			if not jumpEnabled then
-				if navArea:HasAttributes(NAV_MESH_JUMP) then
-					return false
-				end
-			end
-	
-			if not waterEnabled and navArea:IsUnderwater() then
-				return false
-			end
-	
-			local areaSize = navArea:GetSizeX() * navArea:GetSizeY()
-			if areaSize < minimalAreaSize then
-				return false
-			end
-	
-			return true
-		end
-	
-		local allNavAreas = navmesh.GetAllNavAreas()
-		for i = 1, #allNavAreas do
-			local navArea = allNavAreas[i]
-			if isAreaEligible(navArea) then
-				local areaData = {
-					id = navArea:GetID(),
-					pos = navArea:GetCenter(),
-					adjacents = {},
-					jumps = {}
-				}
-				
-				eligibleNavAreas[#eligibleNavAreas + 1] = areaData
-				eligibleNavAreaIds[navArea:GetID()] = true
-			end
-		end
-	
-		for i = 1, #eligibleNavAreas do
-			local areaData = eligibleNavAreas[i]
-			local navArea = navmesh.GetNavAreaByID(areaData.id)
-			if not navArea then continue end
-	
-			local adjacentAreas = navArea:GetAdjacentAreas()
-			for j = 1, #adjacentAreas do
-				local adjacentArea = adjacentAreas[j]
-				local adjacentId = adjacentArea:GetID()
-				
-				if eligibleNavAreaIds[adjacentId] then
-					local heightChange = math.abs(navArea:ComputeAdjacentConnectionHeightChange(adjacentArea))
-					
-					if heightChange <= 18 then
-						areaData.adjacents[#areaData.adjacents + 1] = adjacentId
-					else
-						if jumpLinksEnabled then
-							areaData.jumps[#areaData.jumps + 1] = adjacentId
-						end
-					end
-				end
-			end
-		end
-	
-		local finalAreas = {}
-		local usedAreaIds = {}
-		local remainingAreas = {}
-
-		for i = 1, #eligibleNavAreas do
-			local areaData = eligibleNavAreas[i]
-			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
-				if #finalAreas < MAX_NODES then
-					finalAreas[#finalAreas + 1] = areaData
-					usedAreaIds[areaData.id] = true
-				else
-					remainingAreas[#remainingAreas + 1] = areaData
-				end
-			end
-		end
-		
-		local finalAreasChanged = true
-		while finalAreasChanged and #remainingAreas > 0 do
-			finalAreasChanged = false
-			
-			for i = #finalAreas, 1, -1 do
-				local areaData = finalAreas[i]
-				local connectedAdjacents = 0
-				local connectedJumps = 0
-				
-				for j = 1, #areaData.adjacents do
-					local adjId = areaData.adjacents[j]
-					if usedAreaIds[adjId] then
-						connectedAdjacents = connectedAdjacents + 1
-					end
-				end
-				
-				if jumpLinksEnabled then
-					for j = 1, #areaData.jumps do
-						local jumpId = areaData.jumps[j]
-						if usedAreaIds[jumpId] then
-							connectedJumps = connectedJumps + 1
-						end
-					end
-				end
-				
-				if connectedAdjacents == 0 and (not jumpLinksEnabled or connectedJumps == 0) then
-					for j = 1, #remainingAreas do
-						local remainingArea = remainingAreas[j]
-						local replacementConnectedAdjacents = 0
-						local replacementConnectedJumps = 0
-						
-						for k = 1, #remainingArea.adjacents do
-							local adjId = remainingArea.adjacents[k]
-							if usedAreaIds[adjId] then
-								replacementConnectedAdjacents = replacementConnectedAdjacents + 1
-							end
-						end
-						
-						if jumpLinksEnabled then
-							for k = 1, #remainingArea.jumps do
-								local jumpId = remainingArea.jumps[k]
-								if usedAreaIds[jumpId] then
-									replacementConnectedJumps = replacementConnectedJumps + 1
-								end
-							end
-						end
-						
-						if replacementConnectedAdjacents > 0 or (jumpLinksEnabled and replacementConnectedJumps > 0) then
-							usedAreaIds[areaData.id] = nil
-							table.remove(finalAreas, i)
-							
-							finalAreas[#finalAreas + 1] = remainingArea
-							usedAreaIds[remainingArea.id] = true
-							
-							table.remove(remainingAreas, j)
-							
-							finalAreasChanged = true
-							break
-						end
-					end
-					
-					if not finalAreasChanged then
-						usedAreaIds[areaData.id] = nil
-						table.remove(finalAreas, i)
-						finalAreasChanged = true
-					end
-				end
-			end
-		end
-	
-		return finalAreas
-	end
-
-	local chunkSize = 60000
-    net.Receive("nodegraph_gen_server", function(length, player)
-		local plyEntity = net.ReadEntity()
-        if not IsValid(plyEntity) then return end
-
-		local genSettings = net.ReadTable()
-		if not genSettings then return end
-		
-		local posTable = getAllNavAreas(genSettings, plyEntity) or {}
-		local json = util.TableToJSON(posTable)
-		local compressed = util.Compress(json)
-		
-		-- Sending data in chunks due to limited amount of data we can send.
-		local totalChunks = math.ceil(#compressed / chunkSize)
-		for i = 1, totalChunks do
-			local startPos = (i-1) * chunkSize + 1
-			local endPos = math.min(i * chunkSize, #compressed)
-			local chunkData = string.sub(compressed, startPos, endPos)
-			
-			timer.Simple(i * 0.1, function()
-				if not IsValid(plyEntity) then return end
-				
-				net.Start("nodegraph_gen_client")
-				net.WriteUInt(totalChunks, 16)
-				net.WriteUInt(i, 16)
-				net.WriteUInt(#compressed, 32)
-				net.WriteUInt(#chunkData, 32)
-				net.WriteData(chunkData, #chunkData)
-				net.Send(plyEntity)
-			end)
-		end
-	end)
-
-    net.Receive("nodegraph_get_hint_server", function(length, player)
-		local plyEntity = net.ReadEntity()
-        if not IsValid(plyEntity) then return end
-
-		-- Compress just in case the data is too large to be sent.
-		local compressedHintData = util.Compress(util.TableToJSON(hintData, false))
-		net.Start("nodegraph_get_hint_client")
-		net.WriteData(compressedHintData)
-		net.Send(plyEntity)
-	end)
-
-    net.Receive("nodegraph_getmapversion_server", function(length, player)
-		local plyEntity = net.ReadEntity()
-        if not IsValid(plyEntity) then return end
-
-		local mapVersion = game.GetMapVersion()
-		net.Start("nodegraph_getmapversion_client")
-		net.WriteUInt(mapVersion, 32)
-		net.Send(plyEntity)
-	end)
-end
-
-function nodegraph_get_map_nodeable()
-	local path = "maps/graphs/" .. game.GetMap() .. ".ain"
-	if file.Exists(path, "BSP") then
-		return false
-	end
-	return true
-end
-
-function nodegraph_test_recreate_node()
-	local path2 = "maps/graphs/"..game.GetMap()..".ain"
-	local F2 = file.Open(path2, "rb", "GAME")
-	local version1 = 0
-	local size1 = 0
-	if F2 then
-		F2:ReadLong()
-		version1 = F2:ReadLong()
-		size1 = F2:ReadLong()
-		F2:Close()		
-	else
-		return false
-	end
-	
-	local version2 = 0
-	local size2 = 0
-	path2 = "nodegraph/"..game.GetMap()..".txt"
-	F2 = file.Open(path2, "rb", "DATA")
-	if F2 then
-		F2:ReadLong()
-		version2 = F2:ReadLong()
-		size2 = F2:ReadLong()
-		F2:Close()		
-	else
-		return false
-	end
-	return version1~=version2 or size1 ~= size2
-end
-
-function nodegraph_create_nodeable_map()
-	local bspPath = "maps/" .. game.GetMap() .. ".bsp"
-	local inFile = file.Open(bspPath, "rb", "GAME")
-	if not inFile then
-		return false
-	end
-	
-	if not file.IsDir("nodegraph", "DATA") then
-		file.CreateDir("nodegraph")
-	end
-
-	local savePath = "nodegraph/" .. game.GetMap() .. ".bsp"
-	local outFile = file.Open(savePath .. ".dat", "wb", "DATA")
-	if not outFile then
-		inFile:Close()
-		return false
-	end
-	
-	local searchStr = game.GetMap() .. ".ain"
-	local replaceStr = game.GetMap() .. ".aix"
-	local searchLen  = #searchStr
-	local chunkSize  = 1024 * 64 -- 64 KB
-	local buffer = ""
-	local iterations = 0
-
-	-- Read the BSP in chunks and replace any buffer data that matches the search string.
-	while (not inFile:EndOfFile()) do
-		local chunk = inFile:Read(chunkSize)
-		if not chunk or chunk == "" then break end
-
-		local data = buffer .. chunk
-		local writeLen = #data - (searchLen - 1)
-		if writeLen > 0 then
-			local toWrite = string.sub(data, 1, writeLen)
-			toWrite = string.Replace(toWrite, searchStr, replaceStr)
-			outFile:Write(toWrite)
-			buffer = string.sub(data, writeLen + 1)
-		else
-			buffer = data
-		end
-		iterations = iterations + 1
-		-- Free up the memory after 10 iterations.
-		if iterations % 10 == 0 then
-			collectgarbage("step")
-		end
-	end
-
-	-- Write any remaining buffer data.
-	if #buffer > 0 then
-		outFile:Write(string.Replace(buffer, searchStr, replaceStr))
-	end
-
-	inFile:Close()
-	outFile:Close()
-	return true
-end
-
-function sv_opendoor(a)
-	local x = ents.FindByClass(a)
-	for i = 1, #x do
-		local v = x[i]
-		v:Fire("open")
-	end
-end
-
-function sv_breakbrush()
-
-	if game.GetMap()=="pl_thundermountain" then
-	else	
-
-	local x = ents.FindByClass("func_brush")
-	for i = 1, #x do
-		local v = x[i]
-		v:Fire("break")
-		v:Fire("disable")
-		if string.find(v:GetName(),"door") then
-			v:Remove()
-		end
-	end
-	end
-	RunConsoleCommand("ent_remove_all", "func_door")
-	RunConsoleCommand("ent_remove_all", "func_door_rotating")
-	RunConsoleCommand("ent_remove_all", "prop_door")
-	RunConsoleCommand("ent_remove_all", "prop_door_rotating")
-	RunConsoleCommand("ent_remove_all", "func_breakable")
-	if game.GetMap()=="pl_millstone_event" then 
-		RunConsoleCommand("ent_remove_all", "func_brush")
-	end
-	
-	local x = ents.FindByClass("prop_dynamic")
-	for i = 1, #x do
-		local v = x[i]
-		local nm = v:GetName()
-		if string.find(nm,"door") or string.find(nm,"barrier") or nm=="cap2_signs_back_props" then
-			v:Remove()
-		end
-	end
-end
-
-function sv_testdoor()
-	sv_opendoor("func_door")
-	sv_opendoor("func_door_rotating")
-	sv_opendoor("prop_door")
-	sv_opendoor("prop_door_rotating")
-	timer.Simple( 2, function() sv_breakbrush() end )
-end
-
-function cl_testdoor()
-    if(CLIENT) then
-        net.Start("clear_door_call")
-        net.SendToServer()
-    end
-end
-
-if(SERVER) then
-    util.AddNetworkString("clear_door_call")
-    net.Receive("clear_door_call",
-        function(len, ply)
-            if not IsValid(ply) then return end
-			if not ply:IsAdmin() then return end
-            sv_testdoor()
-        end)
-end
-
-function IsNodeBetween(a_pos, b_pos, c_pos, threshold)
-    local ax, ay, az = a_pos.x, a_pos.y, a_pos.z
-    local bx, by, bz = b_pos.x, b_pos.y, b_pos.z
-    local cx, cy, cz = c_pos.x, c_pos.y, c_pos.z
-
-    local acx = cx - ax
-    local acy = cy - ay
-	local acz = cz - az
-
-    local ac_len_sqr = acx * acx + acy * acy + acz * acz
-    if ac_len_sqr == 0 then
-        return false
-    end
-
-    local abx = bx - ax
-    local aby = by - ay
-	local abz = bz - az
-
-    local t = (abx * acx + aby * acy + abz * acz) / ac_len_sqr
-    if t < 0 or t > 1 then
-        return false
-    end
-
-    local px = ax + t * acx
-    local py = ay + t * acy
-	local pz = az + t * acz
-
-    local dx = bx - px
-    local dy = by - py
-	local dz = bz - pz
-
-    local dist_sqr = dx * dx + dy * dy + dz * dz
-
-	-- Assuming threshold is already squared.
-    return dist_sqr <= threshold
-end
-
-function CalculateYaw(startPos, endPos)
-    local direction = endPos - startPos
-    local yawRadians = math.atan2(direction.y, direction.x)
-    local yawDegrees = math.deg(yawRadians)
-    yawDegrees = yawDegrees % 360
-    return yawDegrees
-end
-
-TOOL.Category = "Map"
-TOOL.Name = "Nodegraph Editor+"
-
-if(CLIENT) then
-	local cl_tool_object = nil
-	local nodeGrid
-
+if CLIENT then
+	TOOL.Category = "Map"
+	TOOL.Name = "Nodegraph Editor+"
 	TOOL.Information = {
 		{ name = "left" },
 		{ name = "right" },
@@ -689,30 +16,33 @@ if(CLIENT) then
 		{ name = "info_scrollmassrem" }
 	}
 
-	language.Add("tool.nodegrapheditor.name","Nodegraph Editor+")
-	language.Add("tool.nodegrapheditor.desc","A comprehensive tool to modify a map's nodegraph")
-	language.Add("tool.nodegrapheditor.left","Place/remove a node at your crosshair")
-	language.Add("tool.nodegrapheditor.right","Place a node at your position")
-	language.Add("tool.nodegrapheditor.radiusrem","Remove nodes in radius")
-	language.Add("tool.nodegrapheditor.editlink","Link editing mode for selected node")
-	language.Add("tool.nodegrapheditor.assignhint","Assign hint to selected node")
-	language.Add("tool.nodegrapheditor.info_scrollmassrem","Scroll while holding reload key to change mass remove radius")
+	language.Add("tool.neplus.name","Nodegraph Editor+")
+	language.Add("tool.neplus.desc","A comprehensive tool to modify a map's nodegraph")
+	language.Add("tool.neplus.left","Place/remove a node at your crosshair")
+	language.Add("tool.neplus.right","Place a node at your position")
+	language.Add("tool.neplus.radiusrem","Remove nodes in radius")
+	language.Add("tool.neplus.editlink","Link editing mode for selected node")
+	language.Add("tool.neplus.assignhint","Assign hint to selected node")
+	language.Add("tool.neplus.info_scrollmassrem","Scroll while holding reload key to change mass remove radius")
 
-	if(game.SinglePlayer()) then
+	local cl_tool_object = nil
+	local nodeGrid
+
+	if game.SinglePlayer() then
 		net.Receive("wrench_t_call",
 			function(len)
 			local tool = net.ReadString()
 			local fc = net.ReadUInt(5)
-			
-			if(fc == 2) then 
-				if cl_tool_object and cl_tool_object:IsValid() then
-				cl_tool_object:Holster()
-				return
+
+			if(fc == 2) then
+				if cl_tool_object and IsValid(cl_tool_object) then
+					cl_tool_object:Holster()
+					return
 				end
 			end
-			
+
 			local wep = LocalPlayer():GetActiveWeapon()
-			if(!wep:IsValid() || wep:GetClass() != "gmod_tool" || wep:GetMode() != tool) then return end
+			if(not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= tool) then return end
 			local tool = wep:GetToolObject()
 			local args = {}
 			if(fc <= 1) then
@@ -732,91 +62,26 @@ if(CLIENT) then
 			tool[fc](tool,unpack(args))
 		end)
 	end
-else
-	if(game.SinglePlayer()) then util.AddNetworkString("wrench_t_call") end
-	AddCSLuaFile("effects/effect_node/init.lua") // TODO: Remove this once garry fixes includes
-	if(game.SinglePlayer()) then // Most TOOL functions don't get called on the client in game.SinglePlayer, so we'll do it ourselves.
-		function TOOL:CallOnClient(...)
-			local fc = ...
-			net.Start("wrench_t_call")
-				net.WriteString(self:GetMode())
-				net.WriteUInt(fc,5)
-				if(fc <= 1) then
-					local tr = select(2,...)
-					for i = 1,3 do net.WriteDouble(tr.StartPos[i]) end
-					for i = 1,3 do net.WriteDouble(tr.HitPos[i]) end
-				end
-			net.Send(self:GetOwner())
-		end
-	end
-end
 
-local Nodegraph = FindMetaTable("Nodegraph")
-
-if(CLIENT) then
 	language.Add("undone_node","Undone Node")
+
 	local function GetTool()
 		local wep = LocalPlayer():GetActiveWeapon()
-		if(!wep:IsValid() || wep:GetClass() != "gmod_tool" || wep:GetMode() != "nodegrapheditor") then return end
+		if(not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= "neplus") then return end
 		return wep:GetToolObject()
 	end
-	local cvNotificationSave = CreateClientConVar("~cl_nodegraph_tool_notification_save",0,true)
-	local function ShowFirstTimeNotification()
-		local bNotification = cvNotificationSave:GetInt() == 2
-		local w
-		local pnl
-		if(!bNotification) then
-			RunConsoleCommand("~cl_nodegraph_tool_notification_save","2")
-			w = 500
-			pnl = vgui.Create("DFrame")
-			pnl:SetTitle("Nodegraph Editor+ - First Time Notification")
-			pnl:SizeToContents()
-			pnl:MakePopup()
-		end
 
-		local y = 40
-		local function AddLine(line)
-			MsgN(line)
-			if(bNotification) then return end
-			local l = vgui.Create("DLabel",pnl)
-			l:SetText(line)
-			l:SetPos(20,y)
-			l:SizeToContents()
-			
-			y = y +l:GetTall()
-		end
-		AddLine("This message will only show up once, it will only be printed in the console in the future!")
-		AddLine("The nodegraph has been saved as '" .. game.GetMap() .. ".txt' in 'garrysmod/data/nodegraph/'.")
-		AddLine("Due to limitations regarding file writing in lua, you will have to rename it to '" .. game.GetMap() .. ".ain'")
-		AddLine("and move it to 'garrysmod/maps/graphs/' yourself. If this directory doesn't exist, create it. This")
-		AddLine("needs to be done every time you change the nodegraph.")
-		AddLine("Make sure to change the file extension by renaming the file. Opening it in a text-editor and saving")
-		AddLine("it as '" .. game.GetMap() .. ".ain' will corrupt the nodegraph!")
-		AddLine("")
-		AddLine("Once you have done this, the game will use the new nodegraph the next time you load the map.")
-		AddLine("You can use the modified nodegraph on any server, this addon isn't required for it to work.")
-		if(bNotification) then return end
-		local h = y +60
-		local x,yPnl = ScrW() *0.5 -w *0.5,ScrH() *0.5 -h *0.5
-		pnl:SetSize(w,h)
-		pnl:SetPos(x,yPnl)
-
-		local p = vgui.Create("DButton",pnl)
-		p:SetText("OK")
-		p.DoClick = function() pnl:Close() end
-		p:SetPos(w *0.5 -p:GetWide() *0.5,y +20)
-	end
 	local bWarned
 	local function ShowMapWarning()
 		if(bWarned) then return end
 		bWarned = true
-		
-		if nodegraph_test_recreate_node() then
+
+		if RecreateNodegraph() then
 			notification.AddLegacy("You can reload the .txt nodegraph in the tool menu to update it.",0,8)
 			notification.AddLegacy("The nodegraph file in 'data/nodegraph/' differs from the map's nodegraph.",1,8)
 		end
-		
-		if(nodegraph_get_map_nodeable()) then return end
+
+		if(IsMapNodeable()) then return end
 		local w = 500
 		local pnl = vgui.Create("DFrame")
 		pnl:SetTitle("Nodegraph Editor+ - Map is Unnodeable")
@@ -829,14 +94,16 @@ if(CLIENT) then
 			l:SetText(line)
 			l:SetPos(20,y)
 			l:SizeToContents()
-			
+
 			y = y +l:GetTall()
 		end
+
 		AddLine("This map is not currently nodeable because an .ain file is packed inside the BSP.")
 		AddLine("To make changes to the nodegraph, you need to create a nodeable version of the map first.")
 		AddLine("You can make the map nodeable using the 'Create Nodeable Map' feature in the tool menu.")
-		local h = y +60
-		local x,yPnl = ScrW() *0.5 -w *0.5,ScrH() *0.5 -h *0.5
+
+		local h = y + 60
+		local x, yPnl = ScrW() * 0.5 -w * 0.5, ScrH() * 0.5 -h * 0.5
 		pnl:SetSize(w,h)
 		pnl:SetPos(x,yPnl)
 
@@ -845,6 +112,7 @@ if(CLIENT) then
 		p.DoClick = function() pnl:Close() end
 		p:SetPos(w *0.5 -p:GetWide() *0.5,y +20)
 	end
+
 	local cvDist = CreateClientConVar("cl_nodegraph_tool_draw_distance",1500,true)
 	local cvDistAirNode = CreateClientConVar("cl_nodegraph_tool_airnode_distance",250,true)
 	local cvDistHintNode = CreateClientConVar("cl_nodegraph_tool_hintnode_distance",250,true)
@@ -970,7 +238,7 @@ if(CLIENT) then
 		if(cvShowYaw:GetBool()) then return end
 		hook.Add("RenderScreenspaceEffects",hk,function()
 			local tool = GetTool()
-			if(tool && !cvShowYaw:GetBool()) then
+			if(tool and not cvShowYaw:GetBool()) then
 				local a = math.min((1 -(((CurTime() -1) -tm) * 0.5)) *255,255)
 				if(a < 0) then hook.Remove("RenderScreenspaceEffects",hk)
 				else
@@ -1031,13 +299,14 @@ if(CLIENT) then
 				notification.AddLegacy("Removed " .. removed .. " nodes within " .. radius .. " units.",0,8)
 			end
 		else
-			if(self.m_selected) then
-				if(self:GetOwner():KeyDown(IN_DUCK) || self:GetOwner():KeyDown(IN_USE)) then
+			if self.m_selected then
+				if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
 					if(self.m_bKeepSelection) then
 						local nodeTrace,nodeTraceID = self:GetTraceNode()
 						local nodeSelected = nodes[self.m_selected]
-						if(nodeTrace == nodeSelected) then self:RemoveLinks(self.m_selected)
-						elseif(self:HasLink(self.m_selected,nodeTraceID)) then self:RemoveLink(self.m_selected,nodeTraceID)
+						if nodeTrace == nodeSelected then self:RemoveLinks(self.m_selected)
+						elseif self:HasLink(self.m_selected,nodeTraceID) then
+							self:RemoveLink(self.m_selected,nodeTraceID)
 						else
 							if cvJumpLink:GetBool() then
 								self:AddLink(self.m_selected,nodeTraceID,2)
@@ -1053,7 +322,7 @@ if(CLIENT) then
 	end
 	function TOOL:RightClick(tr)
 		if self.m_selected then
-			if(self:GetOwner():KeyDown(IN_DUCK) || self:GetOwner():KeyDown(IN_USE)) then
+			if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
 				local nodeSelected = nodes[self.m_selected]
 				nodeSelected.hint = cvHint:GetInt()
 				notification.AddLegacy("Assigned hint info of selected node to " .. nodeSelected.hint .. ".",0,8)
@@ -1217,11 +486,11 @@ if(CLIENT) then
 			end
 		end
 		if cvUndoableNodes:GetBool() then
-			net.Start("sv_nodegrapheditor_undo_node") // Sending it to the server and then back to the client. Dumb, but no other way.
+			net.Start("sv_nodegrapheditor_undo_node")
 				net.WriteUInt(nodeID,14)
 			net.SendToServer()
 		end
-		if((numNodes == 7950 || numNodes == 8000 || numNodes == 8150) and createType ~= NODE_TYPE_HINT) then notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. MAX_NODES .. ").",0,8)
+		if((numNodes == 7950 or numNodes == 8000 or numNodes == 8150) and createType ~= NODE_TYPE_HINT) then notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. MAX_NODES .. ").",0,8)
 		elseif(numNodes == MAX_NODES and createType ~= NODE_TYPE_HINT) then notification.AddLegacy("You have reached the node limit.",0,8) end
 	end
 	function TOOL:CreateNodeGen(pos, nodetype, hint)
@@ -1262,15 +531,15 @@ if(CLIENT) then
 		local fullSize = net.ReadUInt(32)
 		local chunkSize = net.ReadUInt(32)
 		local chunkData = net.ReadData(chunkSize)
-		
+
 		if chunkIndex == 1 then
 			expectedChunks = totalChunks
 			totalSize = fullSize
 			receivedChunks = {}
 		end
-		
+
 		receivedChunks[chunkIndex] = chunkData
-		
+
 		local allChunksReceived = true
 		for i = 1, expectedChunks do
 			if not receivedChunks[i] then
@@ -1278,26 +547,26 @@ if(CLIENT) then
 				break
 			end
 		end
-		
+
 		if allChunksReceived then
 			local combinedData = ""
 			for i = 1, expectedChunks do
 				combinedData = combinedData .. receivedChunks[i]
 			end
-			
+
 			local json = util.Decompress(combinedData)
 			local posTable = util.JSONToTable(json)
 
 			receivedChunks = {}
-			
+
 			local tool = GetTool()
 			local numNodes
 
-			if not tool then 
+			if not tool then
 				return
 			end
 
-			if not posTable or #posTable <= 0 then 
+			if not posTable or #posTable <= 0 then
 				notification.AddLegacy("No Navmesh found. Please generate one first before using.",0,8)
 				return
 			end
@@ -1307,7 +576,7 @@ if(CLIENT) then
 					nodegraph:RemoveNode(id)
 				end
 			end
-		
+
 			local generatedCount = 0
 			local areaIDToNodeID = {}
 			local nodeList = {}
@@ -1401,7 +670,7 @@ if(CLIENT) then
 			tool:BuildNodeGrid()
 			tool:BuildZone()
 			tool:ClearEffects()
-		
+
 			if generatedCount > 0 then
 				notification.AddLegacy("Successfully generated " .. generatedCount .. " Ground Nodes.",0,8)
 			else
@@ -1411,7 +680,7 @@ if(CLIENT) then
 	end)
 	net.Receive("nodegraph_cleareffects_client", function(length)
 		for _, v in ents.Iterator() do
-			if v:GetClass() == "class CLuaEffect" and v.EffectName == "effect_node" then
+			if v:GetClass() == "class CLuaEffect" and v.EffectName == "neplus_effect" then
 				if IsValid(v) then
 					v:Remove()
 				end
@@ -1461,12 +730,12 @@ if(CLIENT) then
 		local count = 0
 		local distMin = math.min(cvDist:GetInt(), cvDistLinkAirNodeGen:GetInt())
 		local pl = self:GetOwner()
-		
+
 		for id, node in pairs(nodes) do
 			if node.type == NODE_TYPE_AIR then
 				nodegraph:RemoveNode(id)
 			end
-	
+
 			if node.type == NODE_TYPE_GROUND then
 				local validPos
 				local startPos = node.pos
@@ -1481,11 +750,11 @@ if(CLIENT) then
 						mask = TraceMask,
 						filter = pl
 					})
-				
+
 					if not trace.StartSolid then
 						break
 					end
-				
+
 					startPos = startPos + Vector(0, 0, 1)
 					attempts = attempts + 1
 				end
@@ -1518,9 +787,9 @@ if(CLIENT) then
 				groundData[#groundData + 1] = { pos = validPos, parentID = id, links = node.link }
 			end
 		end
-		
+
 		local parentToAir = {}
-		
+
 		for i = 1, #groundData do
 			local data = groundData[i]
 			local startPos = data.pos
@@ -1548,7 +817,7 @@ if(CLIENT) then
 				end
 			end
 		end
-		
+
 		if cvAirGenGrndLinks:GetBool() then
 			for i = 1, #groundData do
 				local data = groundData[i]
@@ -1579,7 +848,7 @@ if(CLIENT) then
 				end
 			end
 		end
-		
+
 		if cvDistLinkAirNodeGen:GetInt() > 0 then
 			self:BuildNodeGrid()
 			for _, airNodeID in pairs(parentToAir) do
@@ -1606,7 +875,7 @@ if(CLIENT) then
 
 		local removedNodes = self:RemoveUnlinkedNodes(NODE_TYPE_AIR)
 		count = count - removedNodes
-		
+
 		if count > 0 then
 			notification.AddLegacy("Successfully generated " .. count .. " Air Nodes.",0,8)
 		else
@@ -1858,7 +1127,7 @@ if(CLIENT) then
 				local obstructed = false
 				local midPoint = node.pos + (destNode.pos - node.pos) * 0.5
 				local checkRadius = (node.pos - midPoint):Length() + nodeRadiusSqr
-				
+
 				local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
 				for k, nodeB in pairs(obstructionCandidates) do
 					if k ~= id and k ~= destID then
@@ -1870,14 +1139,14 @@ if(CLIENT) then
 						end
 					end
 				end
-				
+
 				if obstructed then
 					self:RemoveLink(id, destID)
 					count = count + 1
 				end
 			end
 		end
-		
+
 		self:ClearEffects()
 		return count
 	end
@@ -1901,7 +1170,7 @@ if(CLIENT) then
 	net.Receive("cl_nodegrapheditor_undo_node",function(len)
 		local nodeID = net.ReadUInt(14)
 		local tool = GetTool()
-		if(!tool) then return end
+		if(not tool) then return end
 		tool:RemoveNode(nodeID)
 	end)
 	function TOOL:HasLink(src,dest) return nodegraph:HasLink(src,dest) end
@@ -2055,10 +1324,10 @@ if(CLIENT) then
 	local function ClientsideEffect(...)
 		local tbEnts = ents.GetAll()
 		util.Effect(...)
-		return ents.GetAll()[#tbEnts +1] || NULL
+		return ents.GetAll()[#tbEnts +1] or NULL
 	end
 	function TOOL:IsNodeTypeVisible(type)
-		return (type == NODE_TYPE_GROUND && cvDrawGround:GetBool()) or (type == NODE_TYPE_AIR && cvDrawAir:GetBool()) or (type == NODE_TYPE_CLIMB && cvDrawClimb:GetBool()) or (type == NODE_TYPE_HINT && cvDrawHint:GetBool())
+		return (type == NODE_TYPE_GROUND and cvDrawGround:GetBool()) or (type == NODE_TYPE_AIR and cvDrawAir:GetBool()) or (type == NODE_TYPE_CLIMB and cvDrawClimb:GetBool()) or (type == NODE_TYPE_HINT and cvDrawHint:GetBool())
 	end
 	function TOOL:PlaceAllNodesToGround()
 		local pl = self:GetOwner()
@@ -2076,11 +1345,11 @@ if(CLIENT) then
 							mask = TraceMask,
 							filter = pl
 						})
-					
+
 						if not trace.StartSolid then
 							break
 						end
-					
+
 						startPos = startPos + Vector(0, 0, 1)
 						count = count + 1
 					end
@@ -2196,7 +1465,7 @@ if(CLIENT) then
 
 		return true
 	end
-	local angNode = Angle(0,0,0) // TODO: Use yaw of node?
+	local angNode = Angle(0,0,0)
 	local minNode = Vector(-30,-30,-30)
 	local maxNode = Vector(30,30,30)
 	function TOOL:GetTraceNode()
@@ -2243,14 +1512,14 @@ if(CLIENT) then
 		if(e) then
 			e:SetColor(colSelected)
 			e.m_rMin,e.m_rMax = e:GetRenderBounds()
-			e:SetRenderBounds(Vector(-16384,-16384,-16384),Vector(16384,16384,16384)) // Make sure this is always rendered, so the links always show
+			e:SetRenderBounds(Vector(-16384,-16384,-16384),Vector(16384,16384,16384))
 			self.m_selected = nodeID
 		end
 	end
 	function TOOL:ClearSelection()
-		if(!self.m_selected) then return end
+		if(not self.m_selected) then return end
 		local e = self.m_tbEffects[self.m_selected]
-		if(e && e.m_rMin) then
+		if(e and e.m_rMin) then
 			e:SetRenderBounds(e.m_rMin,e.m_rMax)
 			e.m_rMin = nil
 			e.m_rMax = nil
@@ -2258,12 +1527,12 @@ if(CLIENT) then
 		self.m_selected = nil
 	end
 	function TOOL:UpdateSelection(pos)
-		if(!self.m_selected) then return end
+		if(not self.m_selected) then return end
 		local nodeSelected = nodes[self.m_selected]
-		if(!nodeSelected) then self:ClearSelection(); return end
+		if(not nodeSelected) then self:ClearSelection(); return end
 		local eSelected = self.m_tbEffects[self.m_selected]
 		if(self.m_bKeepSelection) then
-			if(!self:GetOwner():KeyDown(IN_DUCK) && !self:GetOwner():KeyDown(IN_USE)) then
+			if(not self:GetOwner():KeyDown(IN_DUCK) and not self:GetOwner():KeyDown(IN_USE)) then
 				self.m_bKeepSelection = nil
 				if(eSelected) then eSelected.m_bKeepSelection = nil end
 			else return end
@@ -2274,15 +1543,15 @@ if(CLIENT) then
 			self:ClearSelection()
 		end
 	end
-	function TOOL:SolidifySelection() // Makes the selected node selected until the duck / use key has been released
-		if(!self.m_selected) then return end
+	function TOOL:SolidifySelection()
+		if(not self.m_selected) then return end
 		self.m_bKeepSelection = true
 		local eSelected = self.m_tbEffects[self.m_selected]
-		if(!eSelected) then return end
+		if(not eSelected) then return end
 		eSelected.m_bKeepSelection = true
 	end
 	function TOOL:RemoveEffect(nodeID)
-		if(!self.m_tbEffects[nodeID]) then return end
+		if(not self.m_tbEffects[nodeID]) then return end
 		if(self.m_selected == nodeID) then self:ClearSelection() end
 		self.m_tbEffects[nodeID].m_bRemove = true
 		self.m_tbEffects[nodeID] = nil
@@ -2306,7 +1575,7 @@ if(CLIENT) then
 		local hullView = cvHullView:GetInt()
 
 		local col = colDefault
-		if !plainLinks then
+		if not plainLinks then
 			render.SetMaterial(mat)
 		else
 			render.SetColorMaterial()
@@ -2333,9 +1602,9 @@ if(CLIENT) then
 			end
 		end
 		local node,nodeID = self:GetNode()
-		if(!node) then return end
+		if(not node) then return end
 		local tool = GetTool()
-		if(!tool) then return end
+		if(not tool) then return end
 		local nodeSelected
 		if(tool.m_selected) then nodeSelected = nodes[tool.m_selected] end
 		local nodeTrace
@@ -2360,8 +1629,8 @@ if(CLIENT) then
 				col = colRemove
 			end
 			if(tool.m_bKeepSelection) then
-				if((link.src == nodeSelected || link.dest == nodeSelected) && (nodeSelected == nodeTrace || nodeTrace == link.src || nodeTrace == link.dest)) then
-					if(!nodeTrace || link.src == nodeTrace || link.dest == nodeTrace) then
+				if((link.src == nodeSelected or link.dest == nodeSelected) and (nodeSelected == nodeTrace or nodeTrace == link.src or nodeTrace == link.dest)) then
+					if(not nodeTrace or link.src == nodeTrace or link.dest == nodeTrace) then
 						col = colRemove
 					end
 				end
@@ -2371,7 +1640,7 @@ if(CLIENT) then
 		end
 		if(node == nodeSelected) then
 			if(nodeTrace) then
-				if(!tool:HasLink(nodeID,tool.m_traceNode)) and (tool:GetOwner():KeyDown(IN_DUCK) || tool:GetOwner():KeyDown(IN_USE))  then
+				if(not tool:HasLink(nodeID,tool.m_traceNode)) and (tool:GetOwner():KeyDown(IN_DUCK) or tool:GetOwner():KeyDown(IN_USE))  then
 					render.DrawBeam(node.pos +offset,nodeTrace.pos +offset,plainLinks and 1 or 10,0,0,colNew)
 				end
 			end
@@ -2410,7 +1679,7 @@ if(CLIENT) then
 		else
 			edata:SetMagnitude(node.type)
 		end
-		local e = ClientsideEffect("effect_node",edata)
+		local e = ClientsideEffect("neplus_effect",edata)
 		e:SetPos(node.pos)
 		e:SetNode(node,nodeID)
 		e.DrawLinks = DrawLinks
@@ -2434,13 +1703,13 @@ if(CLIENT) then
 		local snap = cvSnap:GetInt()
 		local tr = util.TraceLine(util.GetPlayerTrace(pl))
 		local createType = cvCreateType:GetInt()
-		if(createType != NODE_TYPE_AIR and createType != NODE_TYPE_HINT) then
+		if(createType ~= NODE_TYPE_AIR and createType ~= NODE_TYPE_HINT) then
 			local pos = SnapToGrid(tr.HitPos,snap)
 			if(createType == NODE_TYPE_CLIMB) then
 				local dir
 				if(tr.Normal.x > tr.Normal.y) then dir = Vector(tr.Normal.x /math.abs(tr.Normal.x) *-1,0,0)
 				else dir = Vector(0,tr.Normal.y /math.abs(tr.Normal.y) *-1,0) end
-				pos = pos +Vector(0,0,8) // Slight offset for climb nodes so they can be placed at edges more easily.
+				pos = pos +Vector(0,0,8)
 			end
 			return pos
 		end
@@ -2485,7 +1754,7 @@ if(CLIENT) then
 	end
 	function TOOL:Holster()
 		for _, v in ents.Iterator() do
-			if v:GetClass() == "class CLuaEffect" and v.EffectName == "effect_node" then
+			if v:GetClass() == "class CLuaEffect" and v.EffectName == "neplus_effect" then
 				if IsValid(v) then
 					v:Remove()
 				end
@@ -2496,12 +1765,12 @@ if(CLIENT) then
 	end
 	function TOOL:IsNodeVisible(nodeID)
 		local node = nodes[nodeID]
-		if(!node) then return false end
+		if not node then return false end
 		local pl = self:GetOwner()
 		local pos = pl:GetShootPos()
 		local dir = pl:GetAimVector()
-		local hit,norm = util.IntersectRayWithOBB(pos,dir *32768,node.pos,angNode,minNode,maxNode)
-		if(!hit) then return false end
+		local hit, norm = util.IntersectRayWithOBB(pos,dir *32768,node.pos,angNode,minNode,maxNode)
+		if not hit then return false end
 		local tr = util.TraceLine({
 			start = pos,
 			endpos = node.pos +Vector(0,0,3),
@@ -2514,7 +1783,7 @@ if(CLIENT) then
 		local txtnode = Nodegraph.Create("nodegraph/"..game.GetMap()..".txt","DATA")
 		if txtnode then
 			txtnode.m_nodegraph.map_version = nodegraph.m_nodegraph.map_version
-			
+
 			nodegraph = txtnode
 			nodes = nodegraph:GetNodes()
 			links = nodegraph:GetLinks()
@@ -2694,12 +1963,12 @@ if(CLIENT) then
 	function TOOL:DrawToolScreen(width, height)
 		surface.SetDrawColor( Color( 0, 0, 0 ) )
 		surface.DrawRect( 0, 0, width, height )
-		
+
 		local nodeCount = nodegraph and nodegraph:CountNodes(nodes) or 0
 		local hintCount = nodegraph and nodegraph:CountHints(nodes) or 0
 		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. MAX_NODES, "NEPlusFont", width * 0.5, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		
+
 		if self:GetOwner():KeyDown(IN_RELOAD) then
 			local yOffset = height * 0.5 - 30
 
@@ -2711,10 +1980,10 @@ if(CLIENT) then
 		elseif self.m_selected ~= nil and nodes and nodes[self.m_selected] then
 			local selectedNode = nodes[self.m_selected]
 			local yOffset = height * 0.5 - 30
-			
+
 			-- Index in table
 			draw.SimpleText("Node #" .. self.m_selected, "NEPlusFont", width * 0.5, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-			
+
 			-- Position
 			local pos = selectedNode.pos or Vector(0, 0, 0)
 			draw.SimpleText("Pos: " .. math.Round(pos.x) .. " " .. math.Round(pos.y) .. " " .. math.Round(pos.z), "NEPlusFont", width * 0.5, yOffset + 20, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -2726,11 +1995,11 @@ if(CLIENT) then
 			-- Type
 			local nodeType = (selectedNode.type == 2 and "Ground") or (selectedNode.type == 3 and "Air") or (selectedNode.type == 4 and "Climb") or (selectedNode.type == 7 and "Hint") or "Unknown"
 			draw.SimpleText("Type: " .. nodeType, "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-			
+
 			-- Zone
 			local nodeZone = selectedNode.zone < 4 and "N/A" or selectedNode.zone or "N/A"
 			draw.SimpleText("Zone: " .. nodeZone, "NEPlusFont", width * 0.5, yOffset + 80, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-			
+
 			-- Hint
 			local nodeHint = selectedNode.hint == 0 and "None" or selectedNode.hint or "None"
 			draw.SimpleText("Hint: " .. nodeHint, "NEPlusFont", width * 0.5, yOffset + 100, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -2740,8 +2009,8 @@ if(CLIENT) then
 			draw.SimpleText("Hull Offset: " .. math.Round(nodeOffset, 2), "NEPlusFont", width * 0.5, yOffset + 120, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
 	end
+
 	function TOOL:Think()
-	
 		local delay = cvThinkDelay:GetFloat()
 
 		if not self.NextThinkTime then
@@ -2750,23 +2019,23 @@ if(CLIENT) then
 
 		if CurTime() >= self.NextThinkTime then
 			cl_tool_object = self
-			if(!self.m_tbEffects) then
+			if(not self.m_tbEffects) then
 				self.m_tbEffects = {}
 				local edata = EffectData()
 				edata:SetMagnitude(NODE_TYPE_GROUND)
-				self.m_ePreview = ClientsideEffect("effect_node",edata)
+				self.m_ePreview = ClientsideEffect("neplus_effect",edata)
 				self.m_ePreview.m_bPreview = true
 				self.m_ePreview.DrawLinks = DrawLinks
-				self.m_ePreviewMassRem = ClientsideEffect("effect_node",edata)
+				self.m_ePreviewMassRem = ClientsideEffect("neplus_effect",edata)
 				self.m_ePreviewMassRem.DrawMassRem = DrawMassRem
-				if(!nodes) then
+				if(not nodes) then
 					self:GetMapVersion()
 					nodegraph = Nodegraph.Read()
 					nodes = nodegraph:GetNodes()
 					links = nodegraph:GetLinks()
 					lookup = nodegraph:GetLookupTable()
 					self:GetBuiltInHints()
-					local hintFile = 
+					local hintFile =
 						file.Read("map_hints/" .. game.GetMap() .. ".json", "DATA") or
 						file.Read("data_static/map_hints/" .. game.GetMap() .. ".json", "GAME") or
 						file.Read("maps/graphs/" .. game.GetMap() .. ".hint.json", "GAME")
@@ -2856,7 +2125,7 @@ if(CLIENT) then
 				self.m_ePreview:SetType(createType)
 			end
 			self.m_ePreview:SetPos(origin)
-			self.m_ePreview:SetNoDraw((!cvDrawPreview:GetBool() || self.m_selected) && true || false)
+			self.m_ePreview:SetNoDraw((not cvDrawPreview:GetBool() or self.m_selected) and true or false)
 			self.m_ePreview:ClearLinks()
 			self.m_ePreviewMassRem:SetPos(massRemOrigin)
 			self.m_ePreviewMassRem:SetNoDraw(not pl:KeyDown(IN_RELOAD))
@@ -2878,7 +2147,7 @@ if(CLIENT) then
 				end
 			end
 			for nodeID, node in pairs(nodesToProcess) do
-				if(!self:IsNodeTypeVisible(node.type)) then self:RemoveEffect(nodeID)
+				if(not self:IsNodeTypeVisible(node.type)) then self:RemoveEffect(nodeID)
 				else
 					local hit,norm = util.IntersectRayWithOBB(pos,dir *32768,node.pos,angNode,minNode,maxNode)
 					if(hit) then
@@ -2886,7 +2155,7 @@ if(CLIENT) then
 						hit = d <= distMaxP
 					end
 					if(hit) then self.m_traceNode = nodeID end
-					if(hit && !self.m_bKeepSelection && self.m_tbEffects[nodeID] && self:IsNodeVisible(nodeID)) then nodesInRay[#nodesInRay + 1] = nodeID
+					if(hit and not self.m_bKeepSelection and self.m_tbEffects[nodeID] and self:IsNodeVisible(nodeID)) then nodesInRay[#nodesInRay + 1] = nodeID
 					else
 						self:CreateEffect(nodeID)
 						if cvDrawPreview:GetBool() then
@@ -3131,7 +2400,7 @@ if(CLIENT) then
 			return ((num - 1) / (#values - 1)), y
 		end
 		pnl:AddItem(pContainer)
-		
+
 		pnl:AddControl("Slider",{type = "int",min = 0,max = 4000,label = "Draw Distance",Command = "cl_nodegraph_tool_draw_distance"})
 		pnl:AddControl("Slider",{type = "int",min = 0,max = 1000,label = "Air Node Distance",Command = "cl_nodegraph_tool_airnode_distance"})
 		pnl:AddControl("Slider",{type = "int",min = 0,max = 1000,label = "Hint Node Distance",Command = "cl_nodegraph_tool_hintnode_distance"})
@@ -3191,7 +2460,8 @@ if(CLIENT) then
 		pNoDoor:SetText("Remove All Doors")
 		local clicktime = 0
 		pNoDoor.DoClick = function(pNoDoor)
-			cl_testdoor()
+			net.Start("clear_door_call")
+        	net.SendToServer()
 		end
 		pNoDoor:SetWide(110)
 		pnl:AddItem(pNoDoor)
@@ -3200,7 +2470,7 @@ if(CLIENT) then
 		pSave:SetText("Save Nodegraph as AIN")
 		pSave.DoClick = function(pSave)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			nodegraph.m_nodegraph.map_version = updatedMapVersion or nodegraph.m_nodegraph.map_version
 			tool:AdjustNodeOffsets()
 			nodegraph:Save()
@@ -3218,7 +2488,7 @@ if(CLIENT) then
 		pSaveENT:SetText("Save Nodegraph as ENT")
 		pSaveENT.DoClick = function(pSaveENT)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			nodegraph:SaveAsENT()
 			notification.AddLegacy("Nodegraph has been saved as 'data/nodegraph/" .. game.GetMap() .. ".ent.txt'.",0,8)
 			notification.AddLegacy("Successfully saved Nodegraph as ENT.",0,8)
@@ -3231,7 +2501,7 @@ if(CLIENT) then
 		pSaveVMF:SetText("Save Nodegraph to VMF")
 		pSaveVMF.DoClick = function(pSaveVMF)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if not file.Exists("data/nodegraph/" .. game.GetMap() .. ".vmf", "GAME") then
 				notification.AddLegacy("Place the VMF file for this map as 'data/nodegraph/" .. game.GetMap() .. ".vmf'.",0,8)
 				notification.AddLegacy("The map's VMF file can't be found!",1,8)
@@ -3249,7 +2519,7 @@ if(CLIENT) then
 		pNodeOnGround:SetText("Snap All Nodes to Ground")
 		pNodeOnGround.DoClick = function(pNodeOnGround)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			tool:PlaceAllNodesToGround()
 			if(tool) then tool:ClearEffects() end
 			notification.AddLegacy("Snapped all nodes position to the ground.",0,8)
@@ -3261,7 +2531,7 @@ if(CLIENT) then
 		pCleanLinks:SetText("Clean Nodegraph Links")
 		pCleanLinks.DoClick = function(pCleanLinks)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			local count = tool:CleanNodegraphLinks()
 			if(count > 0) then
 				tool:ClearEffects()
@@ -3277,7 +2547,7 @@ if(CLIENT) then
 		pRestore:SetText("Restore Nodegraph")
 		pRestore.DoClick = function(pRestore)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if(tool) then tool:ClearEffects() end
 			nodegraph = Nodegraph.Read()
 			nodes = nodegraph:GetNodes()
@@ -3349,12 +2619,12 @@ if(CLIENT) then
 		end
 		pRestore:SetWide(110)
 		pnl:AddItem(pRestore)
-	
+
 		local pRecreate = vgui.Create("DButton",pnl)
 		pRecreate:SetText("Recreate Nodegraph from TXT")
 		pRecreate.DoClick = function(pRecreate)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 
 			if not file.Exists("data/nodegraph/" .. game.GetMap() .. ".txt", "GAME") then
 				notification.AddLegacy("Put your nodegraph .txt into 'data/nodegraph/" .. game.GetMap() .. ".txt'.",0,8)
@@ -3372,7 +2642,7 @@ if(CLIENT) then
 		pRemUnlinked:SetText("Remove Unlinked Nodes")
 		pRemUnlinked.DoClick = function(pRemUnlinked)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			local count = tool:RemoveUnlinkedNodes()
 			if(count > 0) then
 				tool:ClearEffects()
@@ -3388,7 +2658,7 @@ if(CLIENT) then
 		pClear:SetText("Clear Nodegraph")
 		pClear.DoClick = function(pClear)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if(tool) then tool:ClearEffects() end
 			nodegraph = Nodegraph.Read()
 			nodegraph:Clear()
@@ -3408,20 +2678,20 @@ if(CLIENT) then
 		Depending on the size of the map and your computer's performance, this may freeze your game and could take a while.
 
 		This will create a nodeable map at ]] .. "data/nodegraph/" .. game.GetMap() .. ".bsp.dat."})
-		pnl:AddControl("Label",{Text = "Status: " .. (nodegraph_get_map_nodeable() and "Already Nodeable" or "Not Nodeable")})
-		
+		pnl:AddControl("Label",{Text = "Status: " .. (IsMapNodeable() and "Already Nodeable" or "Not Nodeable")})
+
 		local pDump = vgui.Create("DButton",pnl)
 		pDump:SetText("Create Nodeable Map")
 		pDump.DoClick = function(pDump)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 
-			if nodegraph_get_map_nodeable() then
+			if IsMapNodeable() then
 				notification.AddLegacy("This map is already nodeable.",0,8)
 				return
 			end
 
-			if nodegraph_create_nodeable_map() then
+			if GenerateNodeableMap() then
 				notification.AddLegacy("Successfully created a nodeable map at data/nodegraph/" .. game.GetMap() .. ".bsp.dat",0,8)
 			else
 				notification.AddLegacy("Failed to create a nodeable map.",1,8)
@@ -3445,7 +2715,7 @@ if(CLIENT) then
 		pBuildZones:SetText("Build Zones")
 		pBuildZones.DoClick = function(pBuildZones)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			tool:BuildZone()
 			notification.AddLegacy("Zones have been built.",0,8)
 		end
@@ -3456,7 +2726,7 @@ if(CLIENT) then
 		pDelUnselectedZones:SetText("Delete Unselected Zones")
 		pDelUnselectedZones.DoClick = function(pDelUnselectedZones)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if tool:DelZones(false) then
 				notification.AddLegacy("Unselected zones have been deleted.",0,8)
 			end
@@ -3468,7 +2738,7 @@ if(CLIENT) then
 		pDelSelectedZones:SetText("Delete Selected Zones")
 		pDelSelectedZones.DoClick = function(pDelSelectedZones)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if tool:DelZones(true) then
 				notification.AddLegacy("Selected zones have been deleted.",0,8)
 			end
@@ -3493,13 +2763,13 @@ if(CLIENT) then
 		pnl:AddControl("CheckBox",{Label = "Allow Generating on Jump Nav Areas",Command = "cl_nodegraph_tool_gen_ground_allow_jump"})
 		pnl:AddControl("CheckBox",{Label = "Allow Generating on Water",Command = "cl_nodegraph_tool_gen_ground_allow_water"})
 		pnl:AddControl("Label",{Text = [[This feature requires a Navmesh to be present on the map!
-		
+
 		Pressing this button will clear Ground Nodes and start the generation. May freeze your game for a while. Please be patient.]]})
 		local pGenerate = vgui.Create("DButton",pnl)
 		pGenerate:SetText("Generate Ground Nodes")
 		pGenerate.DoClick = function(pGenerate)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			tool:GenerateNodes()
 		end
 		pGenerate:SetWide(110)
@@ -3520,7 +2790,7 @@ if(CLIENT) then
 		pGenGrid:SetText("Generate Ground Nodes")
 		pGenGrid.DoClick = function(pGenGrid)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			if tool.m_bWaitingForGridStart then
 				tool.m_bWaitingForGridStart = false
 				notification.AddLegacy("Cancelled grid generation.",0,8)
@@ -3543,13 +2813,13 @@ if(CLIENT) then
 		pnl:AddControl("CheckBox",{Label = "Use Bounding Box for Link Generation",Command = "cl_nodegraph_tool_gen_air_link_tracehull"})
 		pnl:AddControl("CheckBox",{Label = "Set All Nodes as Strider Node",Command = "cl_nodegraph_tool_gen_air_strider_node"})
 		pnl:AddControl("Label",{Text = [[This feature requires Ground Nodes to be present on the map!
-		
+
 		Pressing this button will clear Air Nodes and start the generation. May freeze your game for a while. Please be patient.]]})
 		local pGenerateAir = vgui.Create("DButton",pnl)
 		pGenerateAir:SetText("Generate Air Nodes")
 		pGenerateAir.DoClick = function(pGenerateAir)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			tool:GenerateAirNodes()
 			if(tool) then tool:ClearEffects() end
 		end
@@ -3568,33 +2838,285 @@ if(CLIENT) then
 		pGenerateJumpLinks:SetText("Generate Jump Links")
 		pGenerateJumpLinks.DoClick = function(pGenerateJumpLinks)
 			local tool = GetTool()
-			if(!tool) then return end
+			if(not tool) then return end
 			tool:GenerateJumpLinks()
 			if(tool) then tool:ClearEffects() end
 		end
 		pGenerateJumpLinks:SetWide(110)
 		pnl:AddItem(pGenerateJumpLinks)
 	end
-else
-	function TOOL:LeftClick(tr)
-		if(game.SinglePlayer()) then self:CallOnClient(0,tr) end
-		return true
-	end
-	function TOOL:RightClick(tr)
-		if(game.SinglePlayer()) then self:CallOnClient(1,tr) end
-		return true
-	end
-	function TOOL:Holster()
-		self.m_deployed = false
-		if(game.SinglePlayer()) then self:CallOnClient(2) end
-		return
-	end
-	function TOOL:Deploy()
-		self.m_deployed = true
-		if(game.SinglePlayer()) then self:CallOnClient(4) end
-	end
+end
+
+if SERVER then
+	util.AddNetworkString("nodegraph_gen_server")
+	util.AddNetworkString("nodegraph_gen_client")
+	util.AddNetworkString("nodegraph_cleareffects_client")
+	util.AddNetworkString("nodegraph_get_hint_server")
+	util.AddNetworkString("nodegraph_get_hint_client")
+	util.AddNetworkString("nodegraph_getmapversion_server")
+	util.AddNetworkString("nodegraph_getmapversion_client")
+	util.AddNetworkString("clear_door_call")
 	util.AddNetworkString("sv_nodegrapheditor_undo_node")
 	util.AddNetworkString("cl_nodegrapheditor_undo_node")
+
+	local hintData = {}
+	hook.Add("EntityKeyValue", "NEPlusGetAllNodeHints", function(ent, key, value)
+		local cls = ent:GetClass()
+		if cls ~= "info_hint" and cls ~= "info_node_hint" and cls ~= "info_node_air_hint" then return end
+
+		ent._hint = ent._hint or {ID = (cls == "info_hint" and ent:EntIndex() or nil)}
+
+		if key == "nodeid" then
+			ent._hint.ID = tostring(value)
+		elseif key == "origin" then
+			ent._hint.Position = value
+		elseif key == "hinttype" then
+			ent._hint.HintType = value
+		end
+
+		if ent._hint.ID and ent._hint.Position and ent._hint.HintType then
+			hintData[#hintData + 1] = {
+				NodeID     = ent._hint.ID,
+				Position   = ent._hint.Position,
+				HintType   = ent._hint.HintType,
+				IsInfoHint = (cls == "info_hint")
+			}
+			ent._hint = nil
+		end
+	end)
+
+	hook.Add("PlayerDeath", "NEPlusPlayerDeath", function(ply, infl, att)
+		net.Start("nodegraph_cleareffects_client")
+		net.Send(ply)
+	end)
+
+	local function getAllNavAreas(genSettings, ply)
+		local eligibleNavAreas = {}
+		local eligibleNavAreaIds = {}
+		local minimalAreaSize = genSettings.NavAreaSize
+		local crouchEnabled = genSettings.CrouchAreas
+		local jumpEnabled = genSettings.JumpAreas
+		local waterEnabled = genSettings.WaterAreas
+		local jumpLinksEnabled = genSettings.GenJumpLinks
+
+		local function isAreaEligible(navArea)
+			if navArea:HasAttributes(NAV_MESH_INVALID) or navArea:IsBlocked() then
+				return false
+			end
+
+			if not crouchEnabled then
+				if navArea:HasAttributes(NAV_MESH_CROUCH) then
+					return false
+				end
+			end
+
+			if not jumpEnabled then
+				if navArea:HasAttributes(NAV_MESH_JUMP) then
+					return false
+				end
+			end
+
+			if not waterEnabled and navArea:IsUnderwater() then
+				return false
+			end
+
+			local areaSize = navArea:GetSizeX() * navArea:GetSizeY()
+			if areaSize < minimalAreaSize then
+				return false
+			end
+
+			return true
+		end
+
+		local allNavAreas = navmesh.GetAllNavAreas()
+		for i = 1, #allNavAreas do
+			local navArea = allNavAreas[i]
+			if isAreaEligible(navArea) then
+				local areaData = {
+					id = navArea:GetID(),
+					pos = navArea:GetCenter(),
+					adjacents = {},
+					jumps = {}
+				}
+
+				eligibleNavAreas[#eligibleNavAreas + 1] = areaData
+				eligibleNavAreaIds[navArea:GetID()] = true
+			end
+		end
+
+		for i = 1, #eligibleNavAreas do
+			local areaData = eligibleNavAreas[i]
+			local navArea = navmesh.GetNavAreaByID(areaData.id)
+			if not navArea then continue end
+
+			local adjacentAreas = navArea:GetAdjacentAreas()
+			for j = 1, #adjacentAreas do
+				local adjacentArea = adjacentAreas[j]
+				local adjacentId = adjacentArea:GetID()
+
+				if eligibleNavAreaIds[adjacentId] then
+					local heightChange = math.abs(navArea:ComputeAdjacentConnectionHeightChange(adjacentArea))
+
+					if heightChange <= 18 then
+						areaData.adjacents[#areaData.adjacents + 1] = adjacentId
+					else
+						if jumpLinksEnabled then
+							areaData.jumps[#areaData.jumps + 1] = adjacentId
+						end
+					end
+				end
+			end
+		end
+
+		local finalAreas = {}
+		local usedAreaIds = {}
+		local remainingAreas = {}
+
+		for i = 1, #eligibleNavAreas do
+			local areaData = eligibleNavAreas[i]
+			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
+				if #finalAreas < MAX_NODES then
+					finalAreas[#finalAreas + 1] = areaData
+					usedAreaIds[areaData.id] = true
+				else
+					remainingAreas[#remainingAreas + 1] = areaData
+				end
+			end
+		end
+
+		local finalAreasChanged = true
+		while finalAreasChanged and #remainingAreas > 0 do
+			finalAreasChanged = false
+
+			for i = #finalAreas, 1, -1 do
+				local areaData = finalAreas[i]
+				local connectedAdjacents = 0
+				local connectedJumps = 0
+
+				for j = 1, #areaData.adjacents do
+					local adjId = areaData.adjacents[j]
+					if usedAreaIds[adjId] then
+						connectedAdjacents = connectedAdjacents + 1
+					end
+				end
+
+				if jumpLinksEnabled then
+					for j = 1, #areaData.jumps do
+						local jumpId = areaData.jumps[j]
+						if usedAreaIds[jumpId] then
+							connectedJumps = connectedJumps + 1
+						end
+					end
+				end
+
+				if connectedAdjacents == 0 and (not jumpLinksEnabled or connectedJumps == 0) then
+					for j = 1, #remainingAreas do
+						local remainingArea = remainingAreas[j]
+						local replacementConnectedAdjacents = 0
+						local replacementConnectedJumps = 0
+
+						for k = 1, #remainingArea.adjacents do
+							local adjId = remainingArea.adjacents[k]
+							if usedAreaIds[adjId] then
+								replacementConnectedAdjacents = replacementConnectedAdjacents + 1
+							end
+						end
+
+						if jumpLinksEnabled then
+							for k = 1, #remainingArea.jumps do
+								local jumpId = remainingArea.jumps[k]
+								if usedAreaIds[jumpId] then
+									replacementConnectedJumps = replacementConnectedJumps + 1
+								end
+							end
+						end
+
+						if replacementConnectedAdjacents > 0 or (jumpLinksEnabled and replacementConnectedJumps > 0) then
+							usedAreaIds[areaData.id] = nil
+							table.remove(finalAreas, i)
+
+							finalAreas[#finalAreas + 1] = remainingArea
+							usedAreaIds[remainingArea.id] = true
+
+							table.remove(remainingAreas, j)
+
+							finalAreasChanged = true
+							break
+						end
+					end
+
+					if not finalAreasChanged then
+						usedAreaIds[areaData.id] = nil
+						table.remove(finalAreas, i)
+						finalAreasChanged = true
+					end
+				end
+			end
+		end
+
+		return finalAreas
+	end
+
+	local chunkSize = 60000
+    net.Receive("nodegraph_gen_server", function(length, player)
+		local plyEntity = net.ReadEntity()
+        if not IsValid(plyEntity) then return end
+
+		local genSettings = net.ReadTable()
+		if not genSettings then return end
+
+		local posTable = getAllNavAreas(genSettings, plyEntity) or {}
+		local json = util.TableToJSON(posTable)
+		local compressed = util.Compress(json)
+
+		-- Sending data in chunks due to limited amount of data we can send.
+		local totalChunks = math.ceil(#compressed / chunkSize)
+		for i = 1, totalChunks do
+			local startPos = (i-1) * chunkSize + 1
+			local endPos = math.min(i * chunkSize, #compressed)
+			local chunkData = string.sub(compressed, startPos, endPos)
+
+			timer.Simple(i * 0.1, function()
+				if not IsValid(plyEntity) then return end
+
+				net.Start("nodegraph_gen_client")
+				net.WriteUInt(totalChunks, 16)
+				net.WriteUInt(i, 16)
+				net.WriteUInt(#compressed, 32)
+				net.WriteUInt(#chunkData, 32)
+				net.WriteData(chunkData, #chunkData)
+				net.Send(plyEntity)
+			end)
+		end
+	end)
+
+    net.Receive("nodegraph_get_hint_server", function(length, player)
+		local plyEntity = net.ReadEntity()
+        if not IsValid(plyEntity) then return end
+
+		-- Compress just in case the data is too large to be sent.
+		local compressedHintData = util.Compress(util.TableToJSON(hintData, false))
+		net.Start("nodegraph_get_hint_client")
+		net.WriteData(compressedHintData)
+		net.Send(plyEntity)
+	end)
+
+    net.Receive("nodegraph_getmapversion_server", function(length, player)
+		local plyEntity = net.ReadEntity()
+        if not IsValid(plyEntity) then return end
+
+		local mapVersion = game.GetMapVersion()
+		net.Start("nodegraph_getmapversion_client")
+		net.WriteUInt(mapVersion, 32)
+		net.Send(plyEntity)
+	end)
+
+	net.Receive("clear_door_call", function(len, ply)
+		if not IsValid(ply) then return end
+		if not ply:IsAdmin() then return end
+		OpenAndRemoveDoors()
+	end)
+
 	net.Receive("sv_nodegrapheditor_undo_node",function(len,pl)
 		local nodeID = net.ReadUInt(14)
 		undo.Create("Node")
@@ -3606,4 +3128,53 @@ else
 			undo.SetPlayer(pl)
 		undo.Finish()
 	end)
+
+	if game.SinglePlayer() then
+		util.AddNetworkString("wrench_t_call")
+	end
+
+	if game.SinglePlayer() then
+		function TOOL:CallOnClient(...)
+			local fc = ...
+			net.Start("wrench_t_call")
+				net.WriteString(self:GetMode())
+				net.WriteUInt(fc,5)
+				if(fc <= 1) then
+					local tr = select(2,...)
+					for i = 1,3 do net.WriteDouble(tr.StartPos[i]) end
+					for i = 1,3 do net.WriteDouble(tr.HitPos[i]) end
+				end
+			net.Send(self:GetOwner())
+		end
+	end
+
+	function TOOL:LeftClick(tr)
+		if(game.SinglePlayer()) then
+			self:CallOnClient(0, tr)
+		end
+
+		return true
+	end
+
+	function TOOL:RightClick(tr)
+		if(game.SinglePlayer()) then 
+			self:CallOnClient(1, tr)
+		end
+
+		return true
+	end
+
+	function TOOL:Holster()
+		self.m_deployed = false
+		if game.SinglePlayer() then
+			self:CallOnClient(2)
+		end
+	end
+
+	function TOOL:Deploy()
+		self.m_deployed = true
+		if game.SinglePlayer() then
+			self:CallOnClient(4)
+		end
+	end
 end

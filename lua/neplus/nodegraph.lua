@@ -1,31 +1,6 @@
-local debug = debug
-local table = table
-local setmetatable = setmetatable
-local game = game
-local file = file
-local MsgN = MsgN
-local Vector = Vector
-local pairs = pairs
-local tostring = tostring
-local util = util
-local math = math
-local string = string
-
-local NODE_TYPE_GROUND = 2
-local NODE_TYPE_AIR = 3
-local NODE_TYPE_CLIMB = 4
-local NODE_TYPE_WATER = 5
-local NODE_TYPE_HINT = 7
-local AI_NODE_ZONE_UNKNOWN = 0
-local AI_NODE_ZONE_SOLO = 1
-local AI_NODE_ZONE_UNIVERSAL = 3
-local AI_NODE_FIRST_ZONE = 4
-local AINET_VERSION_NUMBER = 37
-local NUM_HULLS = 10
-local MAX_NODES = 8192
+include("neplus/constants.lua")
 
 local Nodegraph = {}
-RegisterMetaTable("Nodegraph",Nodegraph)
 
 local methods = {}
 Nodegraph.__index = methods
@@ -38,13 +13,13 @@ end
 function Nodegraph.Create(f,fmode)
 	local t = {}
 	setmetatable(t,Nodegraph)
-	if(f) then if(!t:ParseFile(f,fmode)) then t:Clear() end
+	if(f) then if(not t:ParseFile(f,fmode)) then t:Clear() end
 	else t:Clear() end
 	return t
 end
 
 function Nodegraph.Read(f)
-	if(!f) then f = "maps/graphs/" .. game.GetMap() .. ".ain" end
+	if(not f) then f = "maps/graphs/" .. game.GetMap() .. ".ain" end
 	return Nodegraph.Create(f)
 end
 
@@ -70,20 +45,20 @@ end
 function methods:ParseFile(f,fmode)
 	fmode = fmode or "GAME"
 	f = file.Open(f,"rb",fmode)
-		if(!f) then return end
+		if(not f) then return end
 		local ainet_ver = f:ReadLong()
 		local map_ver = f:ReadLong()
 		local nodegraph = {
 			ainet_version = ainet_ver,
 			map_version = map_ver
 		}
-		if(ainet_ver != AINET_VERSION_NUMBER) then
+		if(ainet_ver ~= AINET_VERSION_NUMBER) then
 			MsgN("Unknown graph file")
 			f:Close()
 			return
 		end
 		local numNodes = f:ReadLong()
-		if(numNodes > MAX_NODES || numNodes < 0) then
+		if(numNodes > MAX_NODES or numNodes < 0) then
 			MsgN("Graph file has an unexpected amount of nodes")
 			f:Close()
 			return
@@ -99,7 +74,7 @@ function methods:ParseFile(f,fmode)
 			local nodetype = f:ReadByte()
 			local nodeinfo = f:ReadUShort()
 			local zone = f:ReadShort()
-			
+
 			local node = {
 				pos = v,
 				yaw = yaw,
@@ -124,18 +99,18 @@ function methods:ParseFile(f,fmode)
 			if srcID == nil or destID == nil then break end
 			local nodesrc = nodes[srcID +1]
 			local nodedest = nodes[destID +1]
-			if(nodesrc && nodedest) then
+			if(nodesrc and nodedest) then
 				nodesrc.neighbor[#nodesrc.neighbor + 1] = nodedest
 				nodesrc.numneighbors = nodesrc.numneighbors +1
-				
+
 				nodesrc.link[#nodesrc.link + 1] = link
 				nodesrc.numlinks = nodesrc.numlinks +1
 				link.src = nodesrc
 				link.srcID = srcID +1
-				
+
 				nodedest.neighbor[#nodedest.neighbor + 1] = nodesrc
 				nodedest.numneighbors = nodedest.numneighbors +1
-				
+
 				nodedest.link[#nodedest.link + 1] = link
 				nodedest.numlinks = nodedest.numlinks +1
 				link.dest = nodedest
@@ -180,7 +155,7 @@ function methods:GetNode(nodeID)
 	return self:GetNodes()[nodeID]
 end
 
--- Since info_hint(s) are not included in the nodegraph, they must not count towards the node count!
+-- Since info_hint(s) are not included in the nodegraph, they must not count towards the node countnot
 function methods:CountNodes(tbl)
 	local count = 0
 	for i, node in pairs(tbl) do
@@ -202,7 +177,7 @@ function methods:CountHints(tbl)
 end
 
 function methods:AddNode(pos,type,yaw,info,hintid)
-	type = type || NODE_TYPE_GROUND
+	type = type or NODE_TYPE_GROUND
 	local nodes = self:GetNodes()
 	local numNodes = self:CountNodes(nodes)
 	if(numNodes == MAX_NODES and type ~= NODE_TYPE_HINT) then return false end
@@ -210,10 +185,10 @@ function methods:AddNode(pos,type,yaw,info,hintid)
 	for i = 1,NUM_HULLS do offset[i] = 0 end
 	local node = {
 		pos = pos,
-		yaw = yaw || 0,
+		yaw = yaw or 0,
 		offset = offset,
 		type = type,
-		info = info || 0,
+		info = info or 0,
 		zone = AI_NODE_ZONE_UNKNOWN,
 		neighbor = {},
 		numneighbors = 0,
@@ -235,7 +210,7 @@ end
 function methods:RemoveLinks(nodeID)
 	local nodes = self:GetNodes()
 	local node = nodes[nodeID]
-	if(!node) then return end
+	if(not node) then return end
 	local links = self:GetLinks()
 	local toRemove = {}
 	for k, link in pairs(links) do
@@ -265,7 +240,7 @@ end
 
 function methods:RemoveNode(nodeID)
 	local nodes = self:GetNodes()
-	if(!nodes[nodeID]) then return end
+	if(not nodes[nodeID]) then return end
 	local node = nodes[nodeID]
 	self:RemoveLinks(nodeID)
 	nodes[nodeID] = nil
@@ -277,20 +252,20 @@ function methods:RemoveLink(src,dest)
 	local nodes = self:GetNodes()
 	local nodeSrc = nodes[src]
 	local nodeDest = nodes[dest]
-	if(!nodeSrc || !nodeDest) then return end
+	if(not nodeSrc or not nodeDest) then return end
 	local links = self:GetLinks()
 	for _,link in pairs(links) do
-		if((link.src == nodeSrc && link.dest == nodeDest) || (link.src == nodeDest && link.dest == nodeSrc)) then
+		if((link.src == nodeSrc and link.dest == nodeDest) or (link.src == nodeDest and link.dest == nodeSrc)) then
 			links[_] = nil
 		end
 	end
 	for _,linkSrc in pairs(nodeSrc.link) do
-		if((linkSrc.src == nodeSrc && linkSrc.dest == nodeDest) || (linkSrc.src == nodeDest && linkSrc.dest == nodeSrc)) then
+		if((linkSrc.src == nodeSrc and linkSrc.dest == nodeDest) or (linkSrc.src == nodeDest and linkSrc.dest == nodeSrc)) then
 			nodeSrc.link[_] = nil
 		end
 	end
 	for _,linkDest in pairs(nodeDest.link) do
-		if((linkDest.src == nodeSrc && linkDest.dest == nodeDest) || (linkDest.src == nodeDest && linkDest.dest == nodeSrc)) then
+		if((linkDest.src == nodeSrc and linkDest.dest == nodeDest) or (linkDest.src == nodeDest and linkDest.dest == nodeSrc)) then
 			nodeDest.link[_] = nil
 		end
 	end
@@ -301,9 +276,9 @@ function methods:AddLink(src,dest,move)
 	local nodes = self:GetNodes()
 	local nodeSrc = nodes[src]
 	local nodeDest = nodes[dest]
-	if(!nodeSrc || !nodeDest) then return end
+	if(not nodeSrc or not nodeDest) then return end
 	if nodeSrc.type == NODE_TYPE_HINT or nodeDest.type == NODE_TYPE_HINT then return end
-	if(!move) then
+	if(not move) then
 		move = {}
 		for i = 1,NUM_HULLS do move[i] = 1 end
 	end
@@ -337,17 +312,17 @@ function methods:GetLink(src,dest)
 	local nodes = self:GetNodes()
 	local nodeSrc = nodes[src]
 	local nodeDest = nodes[dest]
-	if(!nodeSrc || !nodeDest) then return end
+	if(not nodeSrc or not nodeDest) then return end
 	for _,link in pairs(nodeSrc.link) do
-		if(link.src == nodeDest || link.dest == nodeDest) then return link end
+		if(link.src == nodeDest or link.dest == nodeDest) then return link end
 	end
 	for _,link in pairs(nodeDest.link) do
-		if(link.src == nodeSrc || link.dest == nodeSrc) then return link end
+		if(link.src == nodeSrc or link.dest == nodeSrc) then return link end
 	end
 end
 
 function methods:HasLink(src,dest)
-	return self:GetLink(src,dest) != nil
+	return self:GetLink(src,dest) ~= nil
 end
 
 function methods:FloodFillZone(startNode, zone)
@@ -357,10 +332,10 @@ function methods:FloodFillZone(startNode, zone)
     local stack = {startNode}
     while #stack > 0 do
         local node = table.remove(stack)
-        
+
         if node.zone == AI_NODE_ZONE_UNKNOWN then
             node.zone = zone
-            
+
             -- Add all unknown zone linked nodes to the stack.
             for _, link in pairs(node.link) do
                 local linkedNode
@@ -369,7 +344,7 @@ function methods:FloodFillZone(startNode, zone)
                 else
                     linkedNode = link.dest
                 end
-                
+
                 if linkedNode.zone == AI_NODE_ZONE_UNKNOWN then
                     stack[#stack + 1] = linkedNode
                 end
@@ -379,7 +354,7 @@ function methods:FloodFillZone(startNode, zone)
 end
 
 function methods:Save(f)
-	if(!f) then
+	if(not f) then
 		file.CreateDir("nodegraph")
 		f = "nodegraph/" .. game.GetMap() .. ".txt"
 	end
@@ -478,7 +453,7 @@ function methods:Save(f)
 	for i, node in pairs(nodes) do
 		nodes[i].zone = node.zone
 	end
-	
+
 	-- The lookup table are WC Node IDs.
 	for nodeID = 1, #nodes do
 		data.lookup[nodeID] = nodeID
@@ -522,12 +497,12 @@ function methods:Save(f)
 end
 
 function methods:SaveAsENT(f)
-	if(!f) then
+	if(not f) then
 		file.CreateDir("nodegraph")
 		f = "nodegraph/" .. game.GetMap() .. ".ent.txt"
 	end
 	local f = file.Open(f,"wb","DATA")
-	if(!f) then return end
+	if(not f) then return end
 
 	local data = self:GetData()
 	local nodes = data.nodes
@@ -566,7 +541,7 @@ function methods:SaveAsENT(f)
 			links[k] = nil
 		end
 	end
-	
+
 	for i = 1, #nodes do
 		local node = nodes[i]
 		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
@@ -639,18 +614,19 @@ function methods:SaveAsENT(f)
 			else
 				f:Write("\t\"classname\" \"info_hint\"\n")
 			end
-			f:Write("}\n")
-		end
+		f:Write("}\n")
 	end
-	f:Close()
+end
+f:Close()
 end
 
+
 function methods:SaveToVMF(f)
-	if(!f) then
+	if(not f) then
 		file.CreateDir("nodegraph")
 		f = "nodegraph/" .. game.GetMap() .. ".vmf"
 	end
-	
+
 	-- Read existing VMF file.
 	local vmfContent = ""
 	local existingFile = file.Open(f, "rb", "DATA")
@@ -658,22 +634,22 @@ function methods:SaveToVMF(f)
 		vmfContent = existingFile:Read(existingFile:Size())
 		existingFile:Close()
 	end
-	
+
 	-- Remove existing node entities using brace counting.
 	local function removeNodeEntities(content)
 		local result = ""
 		local i = 1
 		local len = string.len(content)
-		
+
 		while i <= len do
 			local entityStart, entityEnd = string.find(content, "entity", i)
 			if not entityStart then
 				result = result .. string.sub(content, i)
 				break
 			end
-			
+
 			result = result .. string.sub(content, i, entityStart - 1)
-			
+
 			local braceStart = string.find(content, "{", entityEnd)
 			if not braceStart then
 				result = result .. string.sub(content, entityStart, entityEnd)
@@ -682,7 +658,7 @@ function methods:SaveToVMF(f)
 				local braceCount = 1
 				local j = braceStart + 1
 				local entityContent = ""
-				
+
 				while j <= len and braceCount > 0 do
 					local char = string.sub(content, j, j)
 					entityContent = entityContent .. char
@@ -693,7 +669,7 @@ function methods:SaveToVMF(f)
 					end
 					j = j + 1
 				end
-				
+
 				local shouldRemove = false
 				if string.find(entityContent, "\"classname\"%s+\"info_node\"") or
 				   string.find(entityContent, "\"classname\"%s+\"info_node_air\"") or
@@ -703,23 +679,23 @@ function methods:SaveToVMF(f)
 				   string.find(entityContent, "\"classname\"%s+\"info_node_climb\"") then
 					shouldRemove = true
 				end
-				
+
 				if not shouldRemove then
 					result = result .. "entity" .. string.sub(content, entityEnd + 1, j - 1)
 				end
 				i = j
 			end
 		end
-		
+
 		return result
 	end
-	
+
 	vmfContent = removeNodeEntities(vmfContent)
-	
+
 	-- Open output file.
 	local outputFile = string.gsub(f, "%.vmf$", ".vmf.txt")
 	local f = file.Open(outputFile,"wb","DATA")
-	if(!f) then return end
+	if(not f) then return end
 
 	local data = self:GetData()
 	local nodes = data.nodes
@@ -759,11 +735,11 @@ function methods:SaveToVMF(f)
 			links[k] = nil
 		end
 	end
-	
+
 	-- Write existing VMF content first.
 	f:Write(vmfContent)
 	vmfContent = nil
-	
+
 	for i = 1, #nodes do
 		local node = nodes[i]
 		if (node.type == NODE_TYPE_GROUND or node.type == NODE_TYPE_AIR) and node.hint == 0 then
@@ -841,3 +817,5 @@ function methods:SaveToVMF(f)
 	end
 	f:Close()
 end
+
+return Nodegraph

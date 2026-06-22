@@ -1,9 +1,3 @@
-local CreateClientConVar = CreateClientConVar
-local Material = Material
-local Color = Color
-local cam = cam
-local render = render
-
 local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez",0,true)
 local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright",1,true)
 local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes",0,true)
@@ -21,8 +15,8 @@ local redColor = Color(255,0,0,255)
 local whiteColor = Color(255,255,255,255)
 
 function EFFECT:Init(data)
-	local type = data:GetMagnitude() || 2
-	self.EffectName = "effect_node"
+	local type = data:GetMagnitude() or 2
+	self.EffectName = "neplus_effect"
 	self:SetType(type)
 end
 
@@ -40,7 +34,7 @@ local nodeTypes = {
 
 function EFFECT:SetType(type)
 	self.m_type = type
-	self:SetModel(nodeTypes[type] || nodeTypes[2])
+	self:SetModel(nodeTypes[type] or nodeTypes[2])
 end
 
 function EFFECT:GetType()
@@ -61,8 +55,11 @@ end
 
 function EFFECT:Think()
 	local node = self:GetNode()
-	if(node) then self:SetPos(node.pos) end
-	return !self.m_bRemove
+	if node then
+		self:SetPos(node.pos)
+	end
+
+	return not self.m_bRemove
 end
 
 function EFFECT:Render()
@@ -71,9 +68,17 @@ function EFFECT:Render()
 	local ignoreZ = ignoreDepth:GetBool()
 	local nodeType = self:GetType() or 2
 
-	if ignoreZ then cam.IgnoreZ(true) end
-	if self.DrawLinks then self:DrawLinks() end
-	if bright then render.SuppressEngineLighting(true) end
+	if ignoreZ then
+		cam.IgnoreZ(true)
+	end
+
+	if self.DrawLinks then
+		self:DrawLinks()
+	end
+
+	if bright then
+		render.SuppressEngineLighting(true)
+	end
 
 	if not self.DrawMassRem then
 		local curColor = self:GetColor()
@@ -103,9 +108,17 @@ function EFFECT:Render()
 		end
 	end
 
-	if bright then render.SuppressEngineLighting(false) end
-	if ignoreZ then cam.IgnoreZ(false) end
-	if self.DrawMassRem then self:DrawMassRem() end
+	if bright then
+		render.SuppressEngineLighting(false)
+	end
+
+	if ignoreZ then
+		cam.IgnoreZ(false)
+	end
+
+	if self.DrawMassRem then
+		self:DrawMassRem()
+	end
 end
 
 function EFFECT:ClearLinks()
@@ -113,6 +126,9 @@ function EFFECT:ClearLinks()
 end
 
 function EFFECT:AddLink(node)
-	if not self.m_tbLinks then self.m_tbLinks = {} end
+	if not self.m_tbLinks then
+		self.m_tbLinks = {}
+	end
+
 	self.m_tbLinks[#self.m_tbLinks + 1] = node
 end
