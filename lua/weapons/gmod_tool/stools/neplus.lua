@@ -144,12 +144,12 @@ if CLIENT then
 	}
 
 	local nodegraph
-	local nodes, links, lookup
-
+	local nodes, lookup
 	local clToolObject = nil
 	local nodeGrid
+
 	if game.SinglePlayer() then
-		net.Receive("wrench_t_call", function(len)
+		net.Receive("wrench_t_call", function()
 			local toolName = net.ReadString()
 			local fc = net.ReadUInt(5)
 			if fc == 2 then
@@ -254,29 +254,26 @@ if CLIENT then
 	local szArrow = 20
 	local colArrow = Color(255, 0, 0, 255)
 	local colArrowSelected = Color(0, 255, 0, 255)
-	cvars.AddChangeCallback("cl_nodegraph_tool_yaw", function(cvar, prev, new)
+	cvars.AddChangeCallback("cl_nodegraph_tool_yaw", function(_, _, new)
 		local tm = CurTime()
 		local hk = "nodegrapheditor_renderyawarrow"
 		local yaw = tonumber(new)
-
 		if cvShowYaw:GetBool() then
 			return
 		end
 
 		hook.Add("RenderScreenspaceEffects", hk, function()
 			local tool = GetTool()
-
 			if tool and not cvShowYaw:GetBool() then
 				local a = math.min((1 - (((CurTime() - 1) - tm) * 0.5)) * 255, 255)
-
 				if a < 0 then
 					hook.Remove("RenderScreenspaceEffects", hk)
 				else
 					local pos = tool:GetPreviewOrigin()
-
 					cam.Start3D(EyePos(), EyeAngles())
 					colArrow.a = a
 					pos = pos + Vector(0, 0, 30)
+
 					local dir = Angle(0, yaw, 0):Forward()
 					render.SetMaterial(matArrow)
 					render.DepthRange(0, 0.01)
@@ -308,7 +305,6 @@ if CLIENT then
 			self:GenerateGridNodes(tr.HitPos)
 			self.m_bWaitingForGridStart = false
 			notification.AddLegacy("Grid generation finished.", 0, 5)
-
 			return true
 		end
 
@@ -368,7 +364,7 @@ if CLIENT then
 		return true
 	end
 
-	function TOOL:RightClick(tr)
+	function TOOL:RightClick()
 		if self.m_selected then
 			if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
 				local nodeSelected = nodes[self.m_selected]
@@ -388,7 +384,6 @@ if CLIENT then
 		local heightOffset = cvH:GetInt()
 		local pl = self:GetOwner()
 		local nodePos = pos
-
 		if createType == Constants.NODE_TYPE_GROUND then
 			nodePos[3] = nodePos[3] + heightOffset
 		end
@@ -426,7 +421,6 @@ if CLIENT then
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
 											if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
-
 												break
 											end
 										end
@@ -452,7 +446,6 @@ if CLIENT then
 										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
 											if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
 												obstructed = true
-
 												break
 											end
 										end
@@ -482,7 +475,6 @@ if CLIENT then
 				local startPos = curNode.pos
 				local count = 0
 				local succeed = false
-
 				if cvPNOGHull:GetBool() then
 					while count < 16 do
 						local trace = util.TraceHull({
@@ -578,13 +570,11 @@ if CLIENT then
 
 		local heightOffset = cvHGrndNodeGen:GetInt()
 		local nodePos = pos
-
 		if nodeType == Constants.NODE_TYPE_GROUND then
 			nodePos[3] = nodePos[3] + heightOffset
 		end
 
 		local nodeID = nodegraph:AddNode(nodePos, nodeType, cvYaw:GetInt(), 0, hint or 0)
-
 		if not nodeID then
 			return nil
 		end
@@ -594,7 +584,6 @@ if CLIENT then
 
 	function TOOL:RemoveUnlinkedNodes(nodeType)
 		local count = 0
-
 		for id, node in pairs(nodes) do
 			if not node.link or table.Count(node.link) <= 0 then
 				if nodeType and node.type ~= nodeType then
@@ -619,7 +608,7 @@ if CLIENT then
 
 	local expectedChunks
 	local receivedChunks = {}
-	net.Receive("nodegraph_gen_client", function(length)
+	net.Receive("nodegraph_gen_client", function()
 		local totalChunks = net.ReadUInt(16)
 		local chunkIndex = net.ReadUInt(16)
 		local fullSize = net.ReadUInt(32)
@@ -634,11 +623,9 @@ if CLIENT then
 		receivedChunks[chunkIndex] = chunkData
 
 		local allChunksReceived = true
-
 		for i = 1, expectedChunks do
 			if not receivedChunks[i] then
 				allChunksReceived = false
-
 				break
 			end
 		end
@@ -703,7 +690,6 @@ if CLIENT then
 				for i = 1, #posTable do
 					local areaData = posTable[i]
 					local srcNodeID = areaIDToNodeID[areaData.id]
-
 					if srcNodeID then
 						for j = 1, #areaData.adjacents do
 							local adjAreaID = areaData.adjacents[j]
@@ -721,7 +707,6 @@ if CLIENT then
 				for i = 1, #posTable do
 					local areaData = posTable[i]
 					local srcNodeID = areaIDToNodeID[areaData.id]
-
 					if srcNodeID then
 						for j = 1, #areaData.jumps do
 							local adjAreaID = areaData.jumps[j]
@@ -733,7 +718,6 @@ if CLIENT then
 								if cvGrndGenHintJumps:GetBool() then
 									local srcNode = nodes[srcNodeID]
 									local destNode = nodes[destNodeID]
-
 									if srcNode and destNode then
 										srcNode.hint = 901
 										destNode.hint = 901
@@ -747,7 +731,6 @@ if CLIENT then
 
 			if cvDistLinkGrndNodeGen:GetInt() > 0 then
 				local distMin = math.min(cvDist:GetInt(), cvDistLinkGrndNodeGen:GetInt())
-
 				for i = 1, #nodeList do
 					local nodeA = nodeList[i]
 					local neighborCandidates = nodeGrid:Query(nodeA.pos, distMin, nodes)
@@ -773,7 +756,6 @@ if CLIENT then
 
 			if cvGrndGenKLZ:GetBool() then
 				local klzCount = tool:OnlyKeepLargestZone(true, false)
-
 				generatedCount = generatedCount - klzCount
 			end
 
@@ -861,7 +843,6 @@ if CLIENT then
 		local count = 0
 		local distMin = math.min(cvDist:GetInt(), cvDistLinkAirNodeGen:GetInt())
 		local pl = self:GetOwner()
-
 		for id, node in pairs(nodes) do
 			if node.type == Constants.NODE_TYPE_AIR then
 				nodegraph:RemoveNode(id)
@@ -871,7 +852,6 @@ if CLIENT then
 				local validPos
 				local startPos = node.pos
 				local attempts = 0
-
 				while attempts < 16 do
 					local trace = util.TraceHull({
 						start = startPos,
@@ -924,7 +904,6 @@ if CLIENT then
 		end
 
 		local parentToAir = {}
-
 		for i = 1, #groundData do
 			local data = groundData[i]
 			local startPos = data.pos
@@ -943,10 +922,8 @@ if CLIENT then
 			local validPos = endPos
 			if validPos then
 				local numNodes = nodegraph:CountNodes(nodes)
-
 				if numNodes >= Constants.MAX_NODES then
 					notification.AddLegacy("Reached the maximum node limit. Can't generate more Air Nodes.", 0, 8)
-
 					break
 				end
 
@@ -967,7 +944,6 @@ if CLIENT then
 				local data = groundData[i]
 				local parentID = data.parentID
 				local airNodeID = parentToAir[parentID]
-
 				if airNodeID then
 					for _, link in pairs(data.links) do
 						if link.move and not table.HasValue(link.move, 1) then
@@ -1026,7 +1002,6 @@ if CLIENT then
 
 		local removedNodes = self:RemoveUnlinkedNodes(Constants.NODE_TYPE_AIR)
 		count = count - removedNodes
-
 		if count > 0 then
 			notification.AddLegacy("Successfully generated " .. count .. " Air Nodes.", 0, 8)
 		else
@@ -1058,13 +1033,11 @@ if CLIENT then
 
 					if d <= distMin then
 						local deltaZ = nodeB.pos[3] - nodeA.pos[3]
-
 						if not self:HasLink(nodeIDA, nodeIDB) and deltaZ < -cvMinJumpHeight:GetInt() then
 							local traceStart = nodeA.pos + Vector(0, 0, 3)
 							local traceEnd = Vector(nodeB.pos.x, nodeB.pos.y, nodeA.pos.z)
 							local traceResult
 							local trace
-
 							if cvJumpGenTraceHull:GetBool() then
 								trace = {
 									start = traceStart,
@@ -1137,8 +1110,6 @@ if CLIENT then
 		startPos.z = math.Round(startPos.z / step) * step
 
 		local minX, maxX, minY, maxY, minZ, maxZ
-		local rangeSqr = range * range
-
 		if useRange then
 			minX, maxX = startPos.x - range, startPos.x + range
 			minY, maxY = startPos.y - range, startPos.y + range
@@ -1151,8 +1122,6 @@ if CLIENT then
 			maxX, maxY, maxZ = maxs.x, maxs.y, maxs.z
 		end
 
-		local candidates = {}
-
 		if cvGrndGenGridRemNodes:GetBool() then
 			for id, node in pairs(nodes) do
 				if node.type == Constants.NODE_TYPE_GROUND then
@@ -1161,6 +1130,8 @@ if CLIENT then
 			end
 		end
 
+		local candidates = {}
+		local rangeSqr = range * range
 		for x = minX, maxX, step do
 			for y = minY, maxY, step do
 				local dx = x - startPos.x
@@ -1180,13 +1151,12 @@ if CLIENT then
 		end)
 
 		for _ = 1, #candidates do
-			local pos = candidates[_]
-
 			if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
 				notification.AddLegacy("Reached node limit. Stopped generation.", 1, 8)
 				break
 			end
 
+			local pos = candidates[_]
 			local aboveOffset = Vector(0, 0, 0)
 			local aboveCheckTr = util.TraceLine({
 				start = pos,
@@ -1250,7 +1220,6 @@ if CLIENT then
 			for i = 1, #createdNodes do
 				local nodeID = createdNodes[i]
 				local node = nodes[nodeID]
-
 				if not node then
 					continue
 				end
@@ -1288,7 +1257,6 @@ if CLIENT then
 			if type(targetNodes) == "table" then
 				for k, v in pairs(targetNodes) do
 					local id = (type(v) == "number" and v) or k
-
 					if nodes[id] then
 						nodesToProcess[id] = nodes[id]
 					end
@@ -1340,13 +1308,11 @@ if CLIENT then
 		end
 
 		self:ClearEffects()
-
 		return count
 	end
 
-	hook.Add("InputMouseApply", "NEPlusAdjustMassRem", function(cmd, x, y, ang)
+	hook.Add("InputMouseApply", "NEPlusAdjustMassRem", function(cmd)
 		local tool = GetTool()
-
 		if tool then
 			if tool:GetOwner():KeyDown(IN_RELOAD) then
 				local scrollDelta = cmd:GetMouseWheel()
@@ -1359,18 +1325,16 @@ if CLIENT then
 		end
 	end)
 
-	hook.Add("PlayerBindPress", "NEPlusDisableWeaponSwitch", function(ply, bind, pressed)
+	hook.Add("PlayerBindPress", "NEPlusDisableWeaponSwitch", function(_, bind)
 		local tool = GetTool()
-
 		if tool and tool:GetOwner():KeyDown(IN_RELOAD) and (string.find(bind, "invnext") or string.find(bind, "invprev")) then
 			return true
 		end
 	end)
 
-	net.Receive("cl_nodegrapheditor_undo_node", function(len)
+	net.Receive("cl_nodegrapheditor_undo_node", function()
 		local nodeID = net.ReadUInt(14)
 		local tool = GetTool()
-
 		if not tool then
 			return
 		end
@@ -1393,9 +1357,7 @@ if CLIENT then
 	function TOOL:TraceHullType(startPos, endPos, hullType, doLift, customMins, customMaxs)
 		local offset = 16 - math.Clamp(cvH:GetInt(), 0, 16)
 		local pl = self:GetOwner()
-
 		local def = HullTypes[hullType]
-
 		if not def then
 			return false
 		end
@@ -1422,8 +1384,7 @@ if CLIENT then
 
 	function TOOL:AdjustNodeOffsets()
 		local pl = self:GetOwner()
-
-		for nodeID, node in pairs(nodes) do
+		for _, node in pairs(nodes) do
 			if node.type ~= Constants.NODE_TYPE_GROUND then
 				continue
 			end
@@ -1448,7 +1409,6 @@ if CLIENT then
 
 				if trace.StartSolid then
 					node.offset[i] = 0
-
 					continue
 				end
 
@@ -1462,10 +1422,8 @@ if CLIENT then
 		local autoHull = cvHullAuto:GetBool()
 		local move = {}
 		local cvHulls = { cvHull1, cvHull2, cvHull3, cvHull4, cvHull5, cvHull6, cvHull7, cvHull8, cvHull9, cvHull10 }
-
 		for i = 1, #cvHulls do
 			local cv = cvHulls[i]
-
 			if moveType == 1 and autoHull then
 				move[i] = self:TraceHullType(srcPos, destPos, i, true) and (1 * moveType) or 0
 			elseif moveType == 4 and autoHull then
@@ -1481,7 +1439,6 @@ if CLIENT then
 	function TOOL:AddLink(src, dest, moveType)
 		local srcNode = nodes[src]
 		local destNode = nodes[dest]
-
 		if not srcNode or not destNode then
 			return
 		end
@@ -1499,7 +1456,6 @@ if CLIENT then
 		end
 
 		local move = {}
-
 		if moveType == 1 then
 			move = self:CreateMoveArray(1, srcNode.pos, destNode.pos)
 		elseif moveType == 2 then
@@ -1521,12 +1477,10 @@ if CLIENT then
 				if cvAutoYaw:GetBool() then
 					if destNode.pos[3] > srcNode.pos[3] then
 						local calcYaw = Math.CalculateYaw(srcNode.pos, destNode.pos)
-
 						srcNode.yaw = calcYaw
 						destNode.yaw = calcYaw
 					elseif destNode.pos[3] < srcNode.pos[3] then
 						local calcYaw = Math.CalculateYaw(destNode.pos, srcNode.pos)
-
 						srcNode.yaw = calcYaw
 						destNode.yaw = calcYaw
 					end
@@ -1541,13 +1495,9 @@ if CLIENT then
 
 	function TOOL:RemoveNode(nodeID)
 		local node = nodes[nodeID]
-
 		if not node then
 			return
 		end
-
-		local nodeType = node.type
-		local nodeHint = node.hint
 
 		self:RemoveEffect(nodeID)
 		nodeGrid:Remove(nodeID, node)
@@ -1558,7 +1508,7 @@ if CLIENT then
 		local count = 0
 		for _, node in pairs(nodes) do
 			if node.type == Constants.NODE_TYPE_HINT then continue end
-			for i, link in pairs(node.link) do
+			for _, link in pairs(node.link) do
 				if table.HasValue(link.move, linkType) then
 					nodegraph:RemoveLink(link.srcID, link.destID)
 					count = count + 1
@@ -1662,7 +1612,6 @@ if CLIENT then
 
 	function TOOL:IsLineClear(a, b, forceSt, forceTh)
 		local checkVis = cvVis:GetBool()
-
 		if not checkVis then
 			return true
 		end
@@ -1675,9 +1624,7 @@ if CLIENT then
 			forceTh = cvTraceHull:GetInt()
 		end
 
-		local pl = self:GetOwner()
 		local trLine = { start = nil, endpos = nil, mask = TraceMask, filter = pl }
-
 		if forceTh == 1 then -- Ground nodes
 			if not self:TraceHullType(a, b, 1, true) then
 				return false
@@ -1696,18 +1643,15 @@ if CLIENT then
 			end
 		end
 
+		local pl = self:GetOwner()
 		if forceSt then
 			local H = cvH:GetInt()
 			local maxDz = cvDZ:GetInt()
 			local maxI = cvDX:GetInt()
-
 			local d1 = (b - a) / 20
 			local s = a - d1
-
 			local down100 = Vector(0, 0, -100)
-
 			local dz = -1000
-
 			for i = 0, maxI do
 				s = s + d1
 				trLine.start = s
@@ -1732,7 +1676,6 @@ if CLIENT then
 				end
 
 				local dz1
-
 				if i == 0 or i >= maxI then
 					dz1 = s.z - H
 				else
@@ -1771,8 +1714,7 @@ if CLIENT then
 		local nearbyNodes = nodeGrid:Query(pos, distMax, nodes)
 		for id, node in pairs(nearbyNodes) do
 			if self:IsNodeTypeVisible(node.type) then
-				local hit, norm = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
-
+				local hit = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
 				if hit then
 					local d = node.pos:DistToSqr(origin)
 					if d <= distMax then
@@ -1795,9 +1737,7 @@ if CLIENT then
 	local colSelected = Color(255, 0, 0, 255)
 	function TOOL:SelectNode(nodeID)
 		if self.m_selected then
-			local nodeSelected = nodes[self.m_selected]
 			local eSelected = self.m_tbEffects[self.m_selected]
-
 			if eSelected then
 				eSelected:SetColor(Color(255, 255, 255, 255))
 			end
@@ -1820,7 +1760,6 @@ if CLIENT then
 		end
 
 		local e = self.m_tbEffects[self.m_selected]
-
 		if e and e.m_rMin then
 			e:SetRenderBounds(e.m_rMin, e.m_rMax)
 			e.m_rMin = nil
@@ -1909,7 +1848,6 @@ if CLIENT then
 		local showYaw = cvShowYaw:GetBool()
 		local yawVal = cvYaw:GetInt()
 		local hullView = cvHullView:GetInt()
-
 		if not plainLinks then
 			render.SetMaterial(mat)
 		else
@@ -2049,7 +1987,6 @@ if CLIENT then
 
 		local node = nodes[nodeID]
 		local effectData = EffectData()
-
 		if nodes[nodeID].hint and nodes[nodeID].hint ~= 0 and (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) then
 			if node.type == Constants.NODE_TYPE_GROUND then
 				effectData:SetMagnitude(5)
@@ -2061,7 +1998,6 @@ if CLIENT then
 		end
 
 		local e = ClientsideEffect("neplus_effect", effectData)
-
 		e:SetPos(node.pos)
 		e:SetNode(node, nodeID)
 		e.DrawLinks = DrawLinks
@@ -2102,7 +2038,6 @@ if CLIENT then
 		local snap = cvSnap:GetInt()
 		local trace = util.TraceLine(util.GetPlayerTrace(ply))
 		local createType = cvCreateType:GetInt()
-
 		if createType ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_HINT then
 			local gridPos = SnapToGrid(trace.HitPos, snap)
 
@@ -2125,7 +2060,6 @@ if CLIENT then
 	function TOOL:GetMassRemOrigin()
 		local ply = self:GetOwner()
 		local trace = util.TraceLine(util.GetPlayerTrace(ply))
-
 		return cvMassRemUsePlyrPos:GetBool() and ply:GetShootPos() or trace.HitPos
 	end
 
@@ -2190,7 +2124,7 @@ if CLIENT then
 		local ply = self:GetOwner()
 		local pos = ply:GetShootPos()
 		local dir = ply:GetAimVector()
-		local hit, _, _ = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
+		local hit = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
 		if not hit then
 			return false
 		end
@@ -2207,13 +2141,11 @@ if CLIENT then
 
 	local function nodegraph_recreate_node()
 		local txtNode = Nodegraph:Create("nodegraph/" .. game.GetMap() .. ".txt", "DATA")
-
 		if txtNode then
 			txtNode.m_nodegraph.map_version = nodegraph.m_nodegraph.map_version
 
 			nodegraph = txtNode
 			nodes = nodegraph:GetNodes()
-			links = nodegraph:GetLinks()
 			lookup = nodegraph:GetLookupTable()
 
 			local tool = GetTool()
@@ -2303,10 +2235,9 @@ if CLIENT then
 			return
 		end
 
-		local count = 0
-
 		self:BuildZone()
 
+		local count = 0
 		if handleGround then
 			local zoneCountGround = {}
 			for _, node in pairs(nodes) do
@@ -2367,7 +2298,6 @@ if CLIENT then
 
 		self:BuildNodeGrid()
 		self:ClearEffects()
-
 		return count
 	end
 
@@ -2385,7 +2315,6 @@ if CLIENT then
 
 	function TOOL:DelZones(delSelected)
 		local zones = ParseSelectedZones(cvSelectedZones)
-
 		if table.Count(zones) == 0 then
 			return false
 		end
@@ -2412,7 +2341,6 @@ if CLIENT then
 			end
 
 			local zoneMatch = zones[tostring(node.zone)]
-
 			if (delSelected and zoneMatch) or (not delSelected and not zoneMatch) then
 				self:RemoveEffect(i)
 				nodeGrid:Remove(i, node)
@@ -2450,7 +2378,6 @@ if CLIENT then
 
 		local nodeCount = nodegraph and nodegraph:CountNodes(nodes) or 0
 		local hintCount = nodegraph and nodegraph:CountHints(nodes) or 0
-
 		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. Constants.MAX_NODES, "NEPlusFont", width * 0.5, 30,
 			Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER,
@@ -2515,7 +2442,7 @@ if CLIENT then
 		end
 
 		if CurTime() >= self.NextThinkTime then
-			cl_tool_object = self
+			clToolObject = self
 
 			if not self.m_tbEffects then
 				self.m_tbEffects = {}
@@ -2533,7 +2460,6 @@ if CLIENT then
 					self:GetMapVersion()
 					nodegraph = Nodegraph:Read()
 					nodes = nodegraph:GetNodes()
-					links = nodegraph:GetLinks()
 					lookup = nodegraph:GetLookupTable()
 					self:GetBuiltInHints()
 
@@ -2705,7 +2631,6 @@ if CLIENT then
 												local midPoint = origin + (node.pos - origin) * 0.5
 												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
-
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
 														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
@@ -2730,7 +2655,6 @@ if CLIENT then
 												local midPoint = origin + (node.pos - origin) * 0.5
 												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
 												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
-
 												for k, nodeB in pairs(obstructionCandidates) do
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
 														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
@@ -2762,7 +2686,6 @@ if CLIENT then
 				local nodeID = nodesInRay[i]
 				local node = nodes[nodeID]
 				local d = node.pos:DistToSqr(pos)
-
 				if d < distClosest then
 					if cvDontSelDiffNode:GetBool() and node.type ~= createType then
 						continue
@@ -3085,7 +3008,6 @@ if CLIENT then
 		self:AddControl("Label", { Text = "Main Functions" })
 		local pNoDoor = vgui.Create("DButton", panel)
 		pNoDoor:SetText("Remove All Doors")
-		local clicktime = 0
 		pNoDoor.DoClick = function()
 			net.Start("clear_door_call")
 			net.SendToServer()
@@ -3143,7 +3065,6 @@ if CLIENT then
 		pSaveVMF:SetText("Save Nodegraph to VMF")
 		pSaveVMF.DoClick = function()
 			local tool = GetTool()
-
 			if not tool then
 				return
 			end
@@ -3219,7 +3140,6 @@ if CLIENT then
 
 			nodegraph = Nodegraph:Read()
 			nodes = nodegraph:GetNodes()
-			links = nodegraph:GetLinks()
 			lookup = nodegraph:GetLookupTable()
 			tool:GetBuiltInHints()
 
@@ -3348,7 +3268,6 @@ if CLIENT then
 		pClear:SetText("Clear Nodegraph")
 		pClear.DoClick = function()
 			local tool = GetTool()
-
 			if not tool then
 				return
 			end
@@ -3365,7 +3284,6 @@ if CLIENT then
 			end
 
 			nodes = nodegraph:GetNodes()
-			links = nodegraph:GetLinks()
 			lookup = nodegraph:GetLookupTable()
 			notification.AddLegacy("Nodegraph has been cleared.", 0, 8)
 		end
@@ -3709,12 +3627,12 @@ if SERVER then
 		end
 	end)
 
-	hook.Add("PlayerDeath", "NEPlusPlayerDeath", function(ply, infl, att)
+	hook.Add("PlayerDeath", "NEPlusPlayerDeath", function(ply)
 		net.Start("nodegraph_cleareffects_client")
 		net.Send(ply)
 	end)
 
-	local function GetAllNavAreas(genSettings, ply)
+	local function GetAllNavAreas(genSettings)
 		local eligibleNavAreas = {}
 		local eligibleNavAreaIds = {}
 		local minimalAreaSize = genSettings.NavAreaSize
@@ -3722,7 +3640,6 @@ if SERVER then
 		local jumpEnabled = genSettings.JumpAreas
 		local waterEnabled = genSettings.WaterAreas
 		local jumpLinksEnabled = genSettings.GenJumpLinks
-
 		local function IsAreaEligible(navArea)
 			if navArea:HasAttributes(NAV_MESH_INVALID) or navArea:IsBlocked() then
 				return false
@@ -3881,9 +3798,8 @@ if SERVER then
 	end
 
 	local chunkSize = 60000
-	net.Receive("nodegraph_gen_server", function(length, player)
+	net.Receive("nodegraph_gen_server", function()
 		local plyEntity = net.ReadEntity()
-
 		if not IsValid(plyEntity) then
 			return
 		end
@@ -3894,13 +3810,10 @@ if SERVER then
 			return
 		end
 
-		local posTable = GetAllNavAreas(genSettings, plyEntity) or {}
+		local posTable = GetAllNavAreas(genSettings) or {}
 		local json = util.TableToJSON(posTable)
 		local compressed = util.Compress(json)
-
-		-- Sending data in chunks due to limited amount of data we can send.
 		local totalChunks = math.ceil(#compressed / chunkSize)
-
 		for i = 1, totalChunks do
 			local startPos = (i - 1) * chunkSize + 1
 			local endPos = math.min(i * chunkSize, #compressed)
@@ -3922,36 +3835,31 @@ if SERVER then
 		end
 	end)
 
-	net.Receive("nodegraph_get_hint_server", function(length, player)
+	net.Receive("nodegraph_get_hint_server", function()
 		local plyEntity = net.ReadEntity()
-
 		if not IsValid(plyEntity) then
 			return
 		end
 
-		-- Compress just in case the data is too large to be sent.
 		local compressedHintData = util.Compress(util.TableToJSON(hintData, false))
-
 		net.Start("nodegraph_get_hint_client")
 		net.WriteData(compressedHintData)
 		net.Send(plyEntity)
 	end)
 
-	net.Receive("nodegraph_getmapversion_server", function(length, player)
+	net.Receive("nodegraph_getmapversion_server", function()
 		local plyEntity = net.ReadEntity()
-
 		if not IsValid(plyEntity) then
 			return
 		end
 
 		local mapVersion = game.GetMapVersion()
-
 		net.Start("nodegraph_getmapversion_client")
 		net.WriteUInt(mapVersion, 32)
 		net.Send(plyEntity)
 	end)
 
-	net.Receive("clear_door_call", function(len, ply)
+	net.Receive("clear_door_call", function(_, ply)
 		if not IsValid(ply) then
 			return
 		end
@@ -3963,24 +3871,21 @@ if SERVER then
 		Helpers.OpenAndRemoveDoors()
 	end)
 
-	net.Receive("sv_nodegrapheditor_undo_node", function(len, pl)
+	net.Receive("sv_nodegrapheditor_undo_node", function(_, ply)
 		local nodeID = net.ReadUInt(14)
-
 		undo.Create("Node")
 		undo.AddFunction(function()
 			net.Start("cl_nodegrapheditor_undo_node")
 			net.WriteUInt(nodeID, 14)
-			net.Send(pl)
+			net.Send(ply)
 		end)
-		undo.SetPlayer(pl)
+		undo.SetPlayer(ply)
 		undo.Finish()
 	end)
 
 	if game.SinglePlayer() then
 		util.AddNetworkString("wrench_t_call")
-	end
 
-	if game.SinglePlayer() then
 		function TOOL:CallOnClient(...)
 			local fc = ...
 
@@ -3990,7 +3895,6 @@ if SERVER then
 
 			if fc <= 1 then
 				local tr = select(2, ...)
-
 				for i = 1, 3 do
 					net.WriteDouble(tr.StartPos[i])
 				end
