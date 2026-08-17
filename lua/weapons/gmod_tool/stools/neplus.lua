@@ -3598,31 +3598,36 @@ if SERVER then
 	util.AddNetworkString("cl_nodegrapheditor_undo_node")
 
 	local hintData = {}
+	local pendingHints = {}
 	hook.Add("EntityKeyValue", "NEPlusGetAllNodeHints", function(ent, key, value)
 		local cls = ent:GetClass()
 		if cls ~= "info_hint" and cls ~= "info_node_hint" and cls ~= "info_node_air_hint" then
 			return
 		end
 
-		ent._hint = ent._hint or { ID = (cls == "info_hint" and ent:EntIndex() or nil) }
-
-		if key == "nodeid" then
-			ent._hint.ID = tostring(value)
-		elseif key == "origin" then
-			ent._hint.Position = value
-		elseif key == "hinttype" then
-			ent._hint.HintType = value
+		local hint = pendingHints[ent]
+		if not hint then
+			hint = { ID = (cls == "info_hint" and ent:EntIndex() or nil) }
+			pendingHints[ent] = hint
 		end
 
-		if ent._hint.ID and ent._hint.Position and ent._hint.HintType then
+		if key == "nodeid" then
+			hint.ID = tostring(value)
+		elseif key == "origin" then
+			hint.Position = value
+		elseif key == "hinttype" then
+			hint.HintType = value
+		end
+
+		if hint.ID and hint.Position and hint.HintType then
 			hintData[#hintData + 1] = {
-				NodeID     = ent._hint.ID,
-				Position   = ent._hint.Position,
-				HintType   = ent._hint.HintType,
+				NodeID     = hint.ID,
+				Position   = hint.Position,
+				HintType   = hint.HintType,
 				IsInfoHint = (cls == "info_hint")
 			}
 
-			ent._hint = nil
+			pendingHints[ent] = nil
 		end
 	end)
 
