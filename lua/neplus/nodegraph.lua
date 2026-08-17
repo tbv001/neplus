@@ -407,7 +407,7 @@ function Nodegraph:FloodFillZone(startNode, zone)
 		return
 	end
 
-	local stack = {startNode}
+	local stack = { startNode }
 
 	while #stack > 0 do
 		local node = table.remove(stack)
@@ -693,7 +693,8 @@ function Nodegraph:SaveAsENT(filePath)
 		if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) and node.hint == 0 then
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
-			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
+			fileHandle:Write("\t\"origin\" \"" ..
+				math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 
@@ -707,7 +708,8 @@ function Nodegraph:SaveAsENT(filePath)
 		else
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
-			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
+			fileHandle:Write("\t\"origin\" \"" ..
+				math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 			fileHandle:Write("\t\"hinttype\" \"" .. node.hint .. "\"\n")
@@ -833,11 +835,11 @@ function Nodegraph:SaveToVMF(filePath)
 				local shouldRemove = false
 
 				if string.find(entityContent, "\"classname\"%s+\"info_node\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_node_air\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_node_hint\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_node_air_hint\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_hint\"") or
-				   string.find(entityContent, "\"classname\"%s+\"info_node_climb\"") then
+					string.find(entityContent, "\"classname\"%s+\"info_node_air\"") or
+					string.find(entityContent, "\"classname\"%s+\"info_node_hint\"") or
+					string.find(entityContent, "\"classname\"%s+\"info_node_air_hint\"") or
+					string.find(entityContent, "\"classname\"%s+\"info_hint\"") or
+					string.find(entityContent, "\"classname\"%s+\"info_node_climb\"") then
 					shouldRemove = true
 				end
 
@@ -918,7 +920,8 @@ function Nodegraph:SaveToVMF(filePath)
 		if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) and node.hint == 0 then
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
-			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
+			fileHandle:Write("\t\"origin\" \"" ..
+				math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 
@@ -932,7 +935,8 @@ function Nodegraph:SaveToVMF(filePath)
 		else
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
-			fileHandle:Write("\t\"origin\" \"" .. math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
+			fileHandle:Write("\t\"origin\" \"" ..
+				math.floor(node.pos[1]) .. " " .. math.floor(node.pos[2]) .. " " .. math.floor(node.pos[3]) .. "\"\n")
 			fileHandle:Write("\t\"nodeid\" \"" .. (i) .. "\"\n")
 			fileHandle:Write("\t\"angles\" \"0 " .. math.floor(node.yaw) .. " 0\"\n")
 			fileHandle:Write("\t\"hinttype\" \"" .. node.hint .. "\"\n")

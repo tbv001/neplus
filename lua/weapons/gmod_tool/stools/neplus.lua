@@ -4,134 +4,31 @@ local Constants = include("neplus/constants.lua")
 local Math = include("neplus/math.lua")
 local Helpers = include("neplus/helpers.lua")
 
+--/////////////////////////////////////////////
+-- CLIENT-SIDE CODE
+--/////////////////////////////////////////////
+
 if CLIENT then
 	TOOL.Category = "Map"
 	TOOL.Name = "Nodegraph Editor+"
 	TOOL.Information = {
 		{ name = "left" },
 		{ name = "right" },
-		{ name = "radiusrem", icon = "gui/lmb.png", icon2 = "gui/r.png" },
-		{ name = "editlink", icon = "gui/lmb.png", icon2 = "gui/e.png" },
-		{ name = "assignhint", icon = "gui/rmb.png", icon2 = "gui/e.png" },
+		{ name = "radiusrem",         icon = "gui/lmb.png", icon2 = "gui/r.png" },
+		{ name = "editlink",          icon = "gui/lmb.png", icon2 = "gui/e.png" },
+		{ name = "assignhint",        icon = "gui/rmb.png", icon2 = "gui/e.png" },
 		{ name = "info_scrollmassrem" }
 	}
 
-	language.Add("tool.neplus.name","Nodegraph Editor+")
-	language.Add("tool.neplus.desc","A comprehensive tool to modify a map's nodegraph")
-	language.Add("tool.neplus.left","Place/remove a node at your crosshair")
-	language.Add("tool.neplus.right","Place a node at your position")
-	language.Add("tool.neplus.radiusrem","Remove nodes in radius")
-	language.Add("tool.neplus.editlink","Link editing mode for selected node")
-	language.Add("tool.neplus.assignhint","Assign hint to selected node")
-	language.Add("tool.neplus.info_scrollmassrem","Scroll while holding reload key to change mass remove radius")
-
-	local cl_tool_object = nil
-	local nodeGrid
-
-	if game.SinglePlayer() then
-		net.Receive("wrench_t_call", function(len)
-			local toolName = net.ReadString()
-			local fc = net.ReadUInt(5)
-			if fc == 2 then
-				if cl_tool_object and IsValid(cl_tool_object) then
-					cl_tool_object:Holster()
-					return
-				end
-			end
-
-			local wep = LocalPlayer():GetActiveWeapon()
-			if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= toolName then
-				return
-			end
-
-			local tool = wep:GetToolObject()
-			local args = {}
-
-			if fc <= 1 then
-				local startPos = Vector(net.ReadDouble(), net.ReadDouble(), net.ReadDouble())
-				local hitPos = Vector(net.ReadDouble(), net.ReadDouble(), net.ReadDouble())
-				args[1] = {
-					StartPos = startPos,
-					HitPos = hitPos,
-					Normal = (hitPos - startPos):GetNormalized()
-				}
-			end
-
-			local resultCode
-			if fc == 0 then
-				resultCode = "LeftClick"
-			elseif fc == 1 then
-				resultCode = "RightClick"
-			elseif fc == 2 then
-				resultCode = "Holster"
-			elseif fc == 3 then
-				resultCode = "ScreenClick"
-			elseif fc == 4 then
-				resultCode = "Deploy"
-			end
-
-			tool[resultCode](tool, unpack(args))
-		end)
-	end
-
+	language.Add("tool.neplus.name", "Nodegraph Editor+")
+	language.Add("tool.neplus.desc", "A comprehensive tool to modify a map's nodegraph")
+	language.Add("tool.neplus.left", "Place/remove a node at your crosshair")
+	language.Add("tool.neplus.right", "Place a node at your position")
+	language.Add("tool.neplus.radiusrem", "Remove nodes in radius")
+	language.Add("tool.neplus.editlink", "Link editing mode for selected node")
+	language.Add("tool.neplus.assignhint", "Assign hint to selected node")
+	language.Add("tool.neplus.info_scrollmassrem", "Scroll while holding reload key to change mass remove radius")
 	language.Add("undone_node", "Undone Node")
-
-	local function GetTool()
-		local wep = LocalPlayer():GetActiveWeapon()
-		if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= "neplus" then
-			return
-		end
-
-		return wep:GetToolObject()
-	end
-
-	local bWarned
-	local function ShowMapWarning()
-		if bWarned then
-			return
-		end
-
-		bWarned = true
-
-		if Helpers.RecreateNodegraph() then
-			notification.AddLegacy("You can reload the .txt nodegraph in the tool menu to update it.", 0, 8)
-			notification.AddLegacy("The nodegraph file in 'data/nodegraph/' differs from the map's nodegraph.", 1, 8)
-		end
-
-		if Helpers.IsMapNodeable() then
-			return
-		end
-
-		local w = 500
-		local pnl = vgui.Create("DFrame")
-		pnl:SetTitle("Nodegraph Editor+ - Map is Unnodeable")
-		pnl:SizeToContents()
-		pnl:MakePopup()
-
-		local y = 40
-		local function AddLine(line)
-			local label = vgui.Create("DLabel", pnl)
-			label:SetText(line)
-			label:SetPos(20, y)
-			label:SizeToContents()
-
-			y = y + label:GetTall()
-		end
-
-		AddLine("This map is not currently nodeable because an .ain file is packed inside the BSP.")
-		AddLine("To make changes to the nodegraph, you need to create a nodeable version of the map first.")
-		AddLine("You can make the map nodeable using the 'Create Nodeable Map' feature in the tool menu.")
-
-		local height = y + 60
-		local xPos, yPos = ScrW() * 0.5 - w * 0.5, ScrH() * 0.5 - height * 0.5
-		pnl:SetSize(w, height)
-		pnl:SetPos(xPos, yPos)
-
-		local okButton = vgui.Create("DButton", pnl)
-		okButton:SetText("OK")
-		okButton.DoClick = function() pnl:Close() end
-		okButton:SetPos(w * 0.5 - okButton:GetWide() * 0.5, y + 20)
-	end
 
 	local cvDist = CreateClientConVar("cl_nodegraph_tool_draw_distance", "1500", true)
 	local cvDistAirNode = CreateClientConVar("cl_nodegraph_tool_airnode_distance", "250", true)
@@ -232,25 +129,131 @@ if CLIENT then
 	local cvHull9 = CreateClientConVar("cl_nodegraph_tool_hulltype_9", "1", false)
 	local cvHull10 = CreateClientConVar("cl_nodegraph_tool_hulltype_10", "1", false)
 
-	local HULL_TYPES = {
-		[1]  = { mins = Vector(-13, -13, 0),   maxs = Vector(13, 13, 72)  }, -- HUMAN_HULL
-		[2]  = { mins = Vector(-20, -20, -20), maxs = Vector(20, 20, 20)  }, -- SMALL_CENTERED_HULL
-		[3]  = { mins = Vector(-15, -15, 0),   maxs = Vector(15, 15, 72)  }, -- WIDE_HUMAN_HULL
-		[4]  = { mins = Vector(-12, -12, 0),   maxs = Vector(12, 12, 24)  }, -- TINY_HULL
-		[5]  = { mins = Vector(-35, -35, 0),   maxs = Vector(35, 35, 32)  }, -- WIDE_SHORT_HULL
-		[6]  = { mins = Vector(-16, -16, 0),   maxs = Vector(16, 16, 64)  }, -- MEDIUM_HULL
-		[7]  = { mins = Vector(-8, -8, -4),    maxs = Vector(8, 8, 4)     }, -- TINY_CENTERED_HULL
-		[8]  = { mins = Vector(-40, -40, 0),   maxs = Vector(40, 40, 100) }, -- LARGE_HULL
-		[9]  = { mins = Vector(-38, -38, -38), maxs = Vector(38, 38, 38)  }, -- LARGE_CENTERED_HULL
-		[10] = { mins = Vector(-18, -18, 0),   maxs = Vector(18, 18, 100) }  -- MEDIUM_TALL_HULL
+	local TraceMask = MASK_NPCWORLDSTATIC
+	local HullTypes = {
+		[1]  = { mins = Vector(-13, -13, 0), maxs = Vector(13, 13, 72) }, -- HUMAN_HULL
+		[2]  = { mins = Vector(-20, -20, -20), maxs = Vector(20, 20, 20) }, -- SMALL_CENTERED_HULL
+		[3]  = { mins = Vector(-15, -15, 0), maxs = Vector(15, 15, 72) }, -- WIDE_HUMAN_HULL
+		[4]  = { mins = Vector(-12, -12, 0), maxs = Vector(12, 12, 24) }, -- TINY_HULL
+		[5]  = { mins = Vector(-35, -35, 0), maxs = Vector(35, 35, 32) }, -- WIDE_SHORT_HULL
+		[6]  = { mins = Vector(-16, -16, 0), maxs = Vector(16, 16, 64) }, -- MEDIUM_HULL
+		[7]  = { mins = Vector(-8, -8, -4), maxs = Vector(8, 8, 4) }, -- TINY_CENTERED_HULL
+		[8]  = { mins = Vector(-40, -40, 0), maxs = Vector(40, 40, 100) }, -- LARGE_HULL
+		[9]  = { mins = Vector(-38, -38, -38), maxs = Vector(38, 38, 38) }, -- LARGE_CENTERED_HULL
+		[10] = { mins = Vector(-18, -18, 0), maxs = Vector(18, 18, 100) } -- MEDIUM_TALL_HULL
 	}
 
-	local TraceMask = MASK_NPCWORLDSTATIC
+	local nodegraph
+	local nodes, links, lookup
 
-	local matArrow = Material("widgets/arrow.png","nocull translucent vertexalpha smooth mips")
+	local clToolObject = nil
+	local nodeGrid
+	if game.SinglePlayer() then
+		net.Receive("wrench_t_call", function(len)
+			local toolName = net.ReadString()
+			local fc = net.ReadUInt(5)
+			if fc == 2 then
+				if clToolObject and IsValid(clToolObject) then
+					clToolObject:Holster()
+					return
+				end
+			end
+
+			local wep = LocalPlayer():GetActiveWeapon()
+			if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= toolName then
+				return
+			end
+
+			local tool = wep:GetToolObject()
+			local args = {}
+			if fc <= 1 then
+				local startPos = Vector(net.ReadDouble(), net.ReadDouble(), net.ReadDouble())
+				local hitPos = Vector(net.ReadDouble(), net.ReadDouble(), net.ReadDouble())
+				args[1] = {
+					StartPos = startPos,
+					HitPos = hitPos,
+					Normal = (hitPos - startPos):GetNormalized()
+				}
+			end
+
+			local resultCode
+			if fc == 0 then
+				resultCode = "LeftClick"
+			elseif fc == 1 then
+				resultCode = "RightClick"
+			elseif fc == 2 then
+				resultCode = "Holster"
+			elseif fc == 3 then
+				resultCode = "ScreenClick"
+			elseif fc == 4 then
+				resultCode = "Deploy"
+			end
+
+			tool[resultCode](tool, unpack(args))
+		end)
+	end
+
+	local function GetTool()
+		local wep = LocalPlayer():GetActiveWeapon()
+		if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= "neplus" then
+			return
+		end
+
+		return wep:GetToolObject()
+	end
+
+	local bWarned
+	local function ShowMapWarning()
+		if bWarned then
+			return
+		end
+
+		bWarned = true
+
+		if Helpers.RecreateNodegraph() then
+			notification.AddLegacy("You can reload the .txt nodegraph in the tool menu to update it.", 0, 8)
+			notification.AddLegacy("The nodegraph file in 'data/nodegraph/' differs from the map's nodegraph.", 1, 8)
+		end
+
+		if Helpers.IsMapNodeable() then
+			return
+		end
+
+		local w = 500
+		local pnl = vgui.Create("DFrame")
+		pnl:SetTitle("Nodegraph Editor+ - Map is Unnodeable")
+		pnl:SizeToContents()
+		pnl:MakePopup()
+
+		local y = 40
+		local function AddLine(line)
+			local label = vgui.Create("DLabel", pnl)
+			label:SetText(line)
+			label:SetPos(20, y)
+			label:SizeToContents()
+
+			y = y + label:GetTall()
+		end
+
+		AddLine("This map is not currently nodeable because an .ain file is packed inside the BSP.")
+		AddLine("To make changes to the nodegraph, you need to create a nodeable version of the map first.")
+		AddLine("You can make the map nodeable using the 'Create Nodeable Map' feature in the tool menu.")
+
+		local height = y + 60
+		local xPos, yPos = ScrW() * 0.5 - w * 0.5, ScrH() * 0.5 - height * 0.5
+		pnl:SetSize(w, height)
+		pnl:SetPos(xPos, yPos)
+
+		local okButton = vgui.Create("DButton", pnl)
+		okButton:SetText("OK")
+		okButton.DoClick = function() pnl:Close() end
+		okButton:SetPos(w * 0.5 - okButton:GetWide() * 0.5, y + 20)
+	end
+
+	local matArrow = Material("widgets/arrow.png", "nocull translucent vertexalpha smooth mips")
 	local szArrow = 20
-	local colArrow = Color(255,0,0,255)
-	local colArrowSelected = Color(0,255,0,255)
+	local colArrow = Color(255, 0, 0, 255)
+	local colArrowSelected = Color(0, 255, 0, 255)
 	cvars.AddChangeCallback("cl_nodegraph_tool_yaw", function(cvar, prev, new)
 		local tm = CurTime()
 		local hk = "nodegrapheditor_renderyawarrow"
@@ -272,14 +275,14 @@ if CLIENT then
 					local pos = tool:GetPreviewOrigin()
 
 					cam.Start3D(EyePos(), EyeAngles())
-						colArrow.a = a
-						pos = pos + Vector(0, 0, 30)
-						local dir = Angle(0, yaw, 0):Forward()
-						render.SetMaterial(matArrow)
-						render.DepthRange(0, 0.01)
-						cam.IgnoreZ(true)
-						render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrow)
-						cam.IgnoreZ(false)
+					colArrow.a = a
+					pos = pos + Vector(0, 0, 30)
+					local dir = Angle(0, yaw, 0):Forward()
+					render.SetMaterial(matArrow)
+					render.DepthRange(0, 0.01)
+					cam.IgnoreZ(true)
+					render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrow)
+					cam.IgnoreZ(false)
 					cam.End3D()
 				end
 			else
@@ -287,8 +290,6 @@ if CLIENT then
 			end
 		end)
 	end)
-	local nodegraph
-	local nodes, links, lookup
 
 	function TOOL:BuildNodeGrid()
 		if not nodeGrid then
@@ -316,7 +317,6 @@ if CLIENT then
 			local radiusSqr = radius * radius
 			local origin = self:GetMassRemOrigin()
 			local removed = 0
-
 			for id, node in pairs(nodes) do
 				local nodeType = node.type
 				local enabled =
@@ -372,7 +372,6 @@ if CLIENT then
 		if self.m_selected then
 			if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
 				local nodeSelected = nodes[self.m_selected]
-
 				nodeSelected.hint = cvHint:GetInt()
 				notification.AddLegacy("Assigned hint info of selected node to " .. nodeSelected.hint .. ".", 0, 8)
 				self:ClearEffects()
@@ -383,6 +382,7 @@ if CLIENT then
 
 		return true
 	end
+
 	function TOOL:CreateNode(pos)
 		local createType = cvCreateType:GetInt()
 		local heightOffset = cvH:GetInt()
@@ -399,7 +399,6 @@ if CLIENT then
 
 		local info = cvHint:GetInt()
 		local nodeID = nodegraph:AddNode(nodePos, createType, cvYaw:GetInt(), 0, info)
-
 		if not nodeID then
 			notification.AddLegacy("You can't place any additional nodes.", 1, 8)
 			return
@@ -560,12 +559,13 @@ if CLIENT then
 
 		if cvUndoableNodes:GetBool() then
 			net.Start("sv_nodegrapheditor_undo_node")
-				net.WriteUInt(nodeID, 14)
+			net.WriteUInt(nodeID, 14)
 			net.SendToServer()
 		end
 
 		if (numNodes == 7950 or numNodes == 8000 or numNodes == 8150) and createType ~= Constants.NODE_TYPE_HINT then
-			notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. Constants.MAX_NODES .. ").", 0, 8)
+			notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. Constants.MAX_NODES .. ").",
+				0, 8)
 		elseif numNodes == Constants.MAX_NODES and createType ~= Constants.NODE_TYPE_HINT then
 			notification.AddLegacy("You have reached the node limit.", 0, 8)
 		end
@@ -950,7 +950,8 @@ if CLIENT then
 					break
 				end
 
-				local airNode = self:CreateNodeGen(validPos, Constants.NODE_TYPE_AIR, cvAirGenStriderNode:GetBool() and 904 or 0)
+				local airNode = self:CreateNodeGen(validPos, Constants.NODE_TYPE_AIR,
+					cvAirGenStriderNode:GetBool() and 904 or 0)
 
 				if airNode then
 					nodes[airNode].parentGround = data.parentID
@@ -1029,7 +1030,8 @@ if CLIENT then
 		if count > 0 then
 			notification.AddLegacy("Successfully generated " .. count .. " Air Nodes.", 0, 8)
 		else
-			notification.AddLegacy("Failed to generate Air Nodes. Either no Ground Nodes found, or no space for Air Nodes.", 1, 8)
+			notification.AddLegacy(
+				"Failed to generate Air Nodes. Either no Ground Nodes found, or no space for Air Nodes.", 1, 8)
 		end
 
 		self:BuildNodeGrid()
@@ -1229,7 +1231,8 @@ if CLIENT then
 
 				local nearby = nodeGrid:Query(placeCheckTr.HitPos, 50, nodes)
 				if table.Count(nearby) == 0 then
-					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset), Constants.NODE_TYPE_GROUND, 0, 0, 0)
+					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset),
+						Constants.NODE_TYPE_GROUND, 0, 0, 0)
 					if nodeGenerated then
 						nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
 						createdNodes[#createdNodes + 1] = nodeGenerated
@@ -1349,7 +1352,8 @@ if CLIENT then
 				local scrollDelta = cmd:GetMouseWheel()
 
 				if scrollDelta ~= 0 then
-					RunConsoleCommand("cl_nodegraph_tool_massrem_radius", math.Clamp(cvMassRemRadius:GetInt() + scrollDelta * 8, 1, 1024))
+					RunConsoleCommand("cl_nodegraph_tool_massrem_radius",
+						math.Clamp(cvMassRemRadius:GetInt() + scrollDelta * 8, 1, 1024))
 				end
 			end
 		end
@@ -1390,7 +1394,7 @@ if CLIENT then
 		local offset = 16 - math.Clamp(cvH:GetInt(), 0, 16)
 		local pl = self:GetOwner()
 
-		local def = HULL_TYPES[hullType]
+		local def = HullTypes[hullType]
 
 		if not def then
 			return false
@@ -1425,7 +1429,7 @@ if CLIENT then
 			end
 
 			for i = 1, 10 do
-				local def = HULL_TYPES[i]
+				local def = HullTypes[i]
 				local mins = def.mins
 				local maxs = def.maxs
 
@@ -1457,7 +1461,7 @@ if CLIENT then
 		moveType = moveType or 1
 		local autoHull = cvHullAuto:GetBool()
 		local move = {}
-		local cvHulls = {cvHull1, cvHull2, cvHull3, cvHull4, cvHull5, cvHull6, cvHull7, cvHull8, cvHull9, cvHull10}
+		local cvHulls = { cvHull1, cvHull2, cvHull3, cvHull4, cvHull5, cvHull6, cvHull7, cvHull8, cvHull9, cvHull10 }
 
 		for i = 1, #cvHulls do
 			local cv = cvHulls[i]
@@ -1567,11 +1571,14 @@ if CLIENT then
 	local function ClientsideEffect(...)
 		local tbEnts = ents.GetAll()
 		util.Effect(...)
-		return ents.GetAll()[#tbEnts +1] or NULL
+		return ents.GetAll()[#tbEnts + 1] or NULL
 	end
 
 	function TOOL:IsNodeTypeVisible(type)
-		return (type == Constants.NODE_TYPE_GROUND and cvDrawGround:GetBool()) or (type == Constants.NODE_TYPE_AIR and cvDrawAir:GetBool()) or (type == Constants.NODE_TYPE_CLIMB and cvDrawClimb:GetBool()) or (type == Constants.NODE_TYPE_HINT and cvDrawHint:GetBool())
+		return (type == Constants.NODE_TYPE_GROUND and cvDrawGround:GetBool()) or
+			(type == Constants.NODE_TYPE_AIR and cvDrawAir:GetBool()) or
+			(type == Constants.NODE_TYPE_CLIMB and cvDrawClimb:GetBool()) or
+			(type == Constants.NODE_TYPE_HINT and cvDrawHint:GetBool())
 	end
 
 	function TOOL:PlaceAllNodesToGround()
@@ -1669,7 +1676,7 @@ if CLIENT then
 		end
 
 		local pl = self:GetOwner()
-		local trLine = {start = nil, endpos = nil, mask = TraceMask, filter = pl}
+		local trLine = { start = nil, endpos = nil, mask = TraceMask, filter = pl }
 
 		if forceTh == 1 then -- Ground nodes
 			if not self:TraceHullType(a, b, 1, true) then
@@ -1913,7 +1920,10 @@ if CLIENT then
 			for i = 1, #self.m_tbLinks do
 				local nodeLinked = self.m_tbLinks[i]
 
-				render.DrawBeam(self:GetPos() + offset, nodeLinked.pos + offset, plainLinks and 1 or 10, 0, 0, (nodeLinked.type == Constants.NODE_TYPE_GROUND and colDefault) or (nodeLinked.type == Constants.NODE_TYPE_AIR and colNew) or (nodeLinked.type == Constants.NODE_TYPE_CLIMB and colNewBlocked) or colDefault)
+				render.DrawBeam(self:GetPos() + offset, nodeLinked.pos + offset, plainLinks and 1 or 10, 0, 0,
+					(nodeLinked.type == Constants.NODE_TYPE_GROUND and colDefault) or
+					(nodeLinked.type == Constants.NODE_TYPE_AIR and colNew) or
+					(nodeLinked.type == Constants.NODE_TYPE_CLIMB and colNewBlocked) or colDefault)
 			end
 		end
 
@@ -1925,11 +1935,11 @@ if CLIENT then
 				colArrow.a = 255
 
 				cam.Start3D(EyePos(), EyeAngles())
-					local dir = Angle(0, yaw, 0):Forward()
-					render.SetMaterial(matArrow)
-					cam.IgnoreZ(true)
-					render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrow)
-					cam.IgnoreZ(false)
+				local dir = Angle(0, yaw, 0):Forward()
+				render.SetMaterial(matArrow)
+				cam.IgnoreZ(true)
+				render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrow)
+				cam.IgnoreZ(false)
 				cam.End3D()
 			end
 		end
@@ -2010,11 +2020,11 @@ if CLIENT then
 				local pos = node.pos + Vector(0, 0, 15)
 
 				cam.Start3D(EyePos(), EyeAngles())
-					local dir = Angle(0, yaw, 0):Forward()
-					render.SetMaterial(matArrow)
-					cam.IgnoreZ(true)
-					render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrowSelected)
-					cam.IgnoreZ(false)
+				local dir = Angle(0, yaw, 0):Forward()
+				render.SetMaterial(matArrow)
+				cam.IgnoreZ(true)
+				render.DrawBeam(pos, pos + dir * szArrow, 6, 1, 0, colArrowSelected)
+				cam.IgnoreZ(false)
 				cam.End3D()
 			end
 		end
@@ -2234,7 +2244,8 @@ if CLIENT then
 					end
 				end
 
-				notification.AddLegacy("Hint Nodes has been loaded from 'nodegraph/" .. game.GetMap() .. ".hint.json'.", 0, 8)
+				notification.AddLegacy("Hint Nodes has been loaded from 'nodegraph/" .. game.GetMap() .. ".hint.json'.",
+					0, 8)
 			end
 
 			if tool then
@@ -2440,47 +2451,59 @@ if CLIENT then
 		local nodeCount = nodegraph and nodegraph:CountNodes(nodes) or 0
 		local hintCount = nodegraph and nodegraph:CountHints(nodes) or 0
 
-		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. Constants.MAX_NODES, "NEPlusFont", width * 0.5, 30, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Nodes: " .. nodeCount .. " / " .. Constants.MAX_NODES, "NEPlusFont", width * 0.5, 30,
+			Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER,
+			TEXT_ALIGN_CENTER)
 
 		if self:GetOwner():KeyDown(IN_RELOAD) then
 			local yOffset = height * 0.5 - 30
 
 			-- Title
-			draw.SimpleText("Mass Remove Mode", "NEPlusFont", width * 0.5, yOffset + 40, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Mass Remove Mode", "NEPlusFont", width * 0.5, yOffset + 40, Color(255, 255, 255),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Display radius
-			draw.SimpleText("Radius: " .. cvMassRemRadius:GetInt(), "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Radius: " .. cvMassRemRadius:GetInt(), "NEPlusFont", width * 0.5, yOffset + 60,
+				Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		elseif self.m_selected ~= nil and nodes and nodes[self.m_selected] then
 			local selectedNode = nodes[self.m_selected]
 			local yOffset = height * 0.5 - 30
 
 			-- Index in table
-			draw.SimpleText("Node #" .. self.m_selected, "NEPlusFont", width * 0.5, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Node #" .. self.m_selected, "NEPlusFont", width * 0.5, yOffset, Color(255, 255, 255),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Position
 			local pos = selectedNode.pos or Vector(0, 0, 0)
-			draw.SimpleText("Pos: " .. math.Round(pos.x) .. " " .. math.Round(pos.y) .. " " .. math.Round(pos.z), "NEPlusFont", width * 0.5, yOffset + 20, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Pos: " .. math.Round(pos.x) .. " " .. math.Round(pos.y) .. " " .. math.Round(pos.z),
+				"NEPlusFont", width * 0.5, yOffset + 20, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Yaw
 			local yaw = selectedNode.yaw or 0
-			draw.SimpleText("Yaw: " .. math.Round(yaw), "NEPlusFont", width * 0.5, yOffset + 40, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Yaw: " .. math.Round(yaw), "NEPlusFont", width * 0.5, yOffset + 40, Color(200, 200, 200),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Type
-			local nodeType = (selectedNode.type == 2 and "Ground") or (selectedNode.type == 3 and "Air") or (selectedNode.type == 4 and "Climb") or (selectedNode.type == 7 and "Hint") or "Unknown"
-			draw.SimpleText("Type: " .. nodeType, "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			local nodeType = (selectedNode.type == 2 and "Ground") or (selectedNode.type == 3 and "Air") or
+				(selectedNode.type == 4 and "Climb") or (selectedNode.type == 7 and "Hint") or "Unknown"
+			draw.SimpleText("Type: " .. nodeType, "NEPlusFont", width * 0.5, yOffset + 60, Color(200, 200, 200),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Zone
 			local nodeZone = selectedNode.zone < 4 and "N/A" or selectedNode.zone or "N/A"
-			draw.SimpleText("Zone: " .. nodeZone, "NEPlusFont", width * 0.5, yOffset + 80, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Zone: " .. nodeZone, "NEPlusFont", width * 0.5, yOffset + 80, Color(200, 200, 200),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Hint
 			local nodeHint = selectedNode.hint == 0 and "None" or selectedNode.hint or "None"
-			draw.SimpleText("Hint: " .. nodeHint, "NEPlusFont", width * 0.5, yOffset + 100, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Hint: " .. nodeHint, "NEPlusFont", width * 0.5, yOffset + 100, Color(200, 200, 200),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Current hull offset
 			local nodeOffset = selectedNode.offset[cvHullView:GetInt()] or 0
-			draw.SimpleText("Hull Offset: " .. math.Round(nodeOffset, 2), "NEPlusFont", width * 0.5, yOffset + 120, Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+			draw.SimpleText("Hull Offset: " .. math.Round(nodeOffset, 2), "NEPlusFont", width * 0.5, yOffset + 120,
+				Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		end
 	end
 
@@ -2759,7 +2782,9 @@ if CLIENT then
 	end
 
 	function TOOL:BuildCPanel(panel)
-		self:AddControl("Header", {Text = "Nodegraph Editor+",Description = [[
+		self:AddControl("Header", {
+			Text = "Nodegraph Editor+",
+			Description = [[
 		Left click to place/remove a node at your crosshair.
 		Right click to place a node at your position.
 		Hold reload and left click to remove nodes in radius.
@@ -2769,41 +2794,42 @@ if CLIENT then
 		- Click same node again to clear links.
 		- Click linked node to remove link.
 		- Click unlinked node to create link.
-		]]})
+		]]
+		})
 
 		local selected1 = cvCreateType:GetInt()
 		local lbl1 = vgui.Create("DLabel", panel)
-		lbl1:SetColor(Color(0,0,0,255))
+		lbl1:SetColor(Color(0, 0, 0, 255))
 		lbl1:SetText("Node Type:")
 		local pCBox1 = vgui.Create("DComboBox", panel)
 		pCBox1:SetSortItems(false)
-		pCBox1:AddChoice("1. Ground Node",Constants.NODE_TYPE_GROUND,selected1 == Constants.NODE_TYPE_GROUND)
-		pCBox1:AddChoice("2. Air Node",Constants.NODE_TYPE_AIR,selected1 == Constants.NODE_TYPE_AIR)
-		pCBox1:AddChoice("3. Climb Node",Constants.NODE_TYPE_CLIMB,selected1 == Constants.NODE_TYPE_CLIMB)
-		pCBox1:AddChoice("4. Hint Node",Constants.NODE_TYPE_HINT,selected1 == Constants.NODE_TYPE_HINT)
+		pCBox1:AddChoice("1. Ground Node", Constants.NODE_TYPE_GROUND, selected1 == Constants.NODE_TYPE_GROUND)
+		pCBox1:AddChoice("2. Air Node", Constants.NODE_TYPE_AIR, selected1 == Constants.NODE_TYPE_AIR)
+		pCBox1:AddChoice("3. Climb Node", Constants.NODE_TYPE_CLIMB, selected1 == Constants.NODE_TYPE_CLIMB)
+		pCBox1:AddChoice("4. Hint Node", Constants.NODE_TYPE_HINT, selected1 == Constants.NODE_TYPE_HINT)
 		pCBox1.OnSelect = function(_, _, _, data)
 			RunConsoleCommand("cl_nodegraph_tool_node_type", data)
 		end
 		pCBox1:SetWide(170)
-		self:AddItem(lbl1,pCBox1)
+		self:AddItem(lbl1, pCBox1)
 
 		local selected = cvJumpLink:GetInt()
 		local lbl = vgui.Create("DLabel", panel)
-		lbl:SetColor(Color(0,0,0,255))
+		lbl:SetColor(Color(0, 0, 0, 255))
 		lbl:SetText("Link Edit Mode:")
 		local pCBox = vgui.Create("DComboBox", panel)
 		pCBox:SetSortItems(false)
-		pCBox:AddChoice("1. Normal",0,selected == 0)
-		pCBox:AddChoice("2. Jump",1,selected == 1)
+		pCBox:AddChoice("1. Normal", 0, selected == 0)
+		pCBox:AddChoice("2. Jump", 1, selected == 1)
 		pCBox.OnSelect = function(_, _, _, data)
 			RunConsoleCommand("cl_nodegraph_tool_jump_link", data)
 		end
 		pCBox:SetWide(170)
-		self:AddItem(lbl,pCBox)
+		self:AddItem(lbl, pCBox)
 
 		local selected2 = cvHint:GetInt()
 		local lbl2 = vgui.Create("DLabel", panel)
-		lbl2:SetColor(Color(0,0,0,255))
+		lbl2:SetColor(Color(0, 0, 0, 255))
 		lbl2:SetText("Node Hint:")
 		local pCBox2 = vgui.Create("DComboBox", panel)
 		pCBox2:SetSortItems(false)
@@ -2843,11 +2869,11 @@ if CLIENT then
 			RunConsoleCommand("cl_nodegraph_tool_node_hint", data)
 		end
 		pCBox2:SetWide(170)
-		self:AddItem(lbl2,pCBox2)
+		self:AddItem(lbl2, pCBox2)
 
 		local selected3 = cvHullView:GetInt()
 		local lbl3 = vgui.Create("DLabel", panel)
-		lbl3:SetColor(Color(0,0,0,255))
+		lbl3:SetColor(Color(0, 0, 0, 255))
 		lbl3:SetText("Hull View:")
 		local pCBox3 = vgui.Create("DComboBox", panel)
 		pCBox3:SetSortItems(false)
@@ -2865,11 +2891,11 @@ if CLIENT then
 			RunConsoleCommand("cl_nodegraph_tool_hulltype_view", data)
 		end
 		pCBox3:SetWide(170)
-		self:AddItem(lbl3,pCBox3)
+		self:AddItem(lbl3, pCBox3)
 
 		local selected = TraceMask
 		local lbl = vgui.Create("DLabel", panel)
-		lbl:SetColor(Color(0,0,0,255))
+		lbl:SetColor(Color(0, 0, 0, 255))
 		lbl:SetText("Trace Mask:")
 		local pCBox = vgui.Create("DComboBox", panel)
 		pCBox:SetSortItems(false)
@@ -2884,25 +2910,27 @@ if CLIENT then
 			TraceMask = data
 		end
 		pCBox:SetWide(170)
-		self:AddItem(lbl,pCBox)
+		self:AddItem(lbl, pCBox)
 
-		self:AddControl("Slider",{type = "float",min = 0,max = 1,label = "Think Delay",Command = "cl_nodegraph_tool_think_delay"})
-		self:AddControl("CheckBox",{Label = "Show Node Preview",Command = "cl_nodegraph_tool_draw_preview"})
-		self:AddControl("CheckBox",{Label = "Show Ground Nodes",Command = "cl_nodegraph_tool_nodes_draw_ground"})
-		self:AddControl("CheckBox",{Label = "Show Air Nodes",Command = "cl_nodegraph_tool_nodes_draw_air"})
-		self:AddControl("CheckBox",{Label = "Show Climb Nodes",Command = "cl_nodegraph_tool_nodes_draw_climb"})
-		self:AddControl("CheckBox",{Label = "Show Hint Nodes",Command = "cl_nodegraph_tool_nodes_draw_hint"})
-		self:AddControl("CheckBox",{Label = "Show Normal Links",Command = "cl_nodegraph_tool_show_normal_links"})
-		self:AddControl("CheckBox",{Label = "Show Jump Links",Command = "cl_nodegraph_tool_show_jump_links"})
-		self:AddControl("CheckBox",{Label = "Show Fly Links",Command = "cl_nodegraph_tool_show_fly_links"})
-		self:AddControl("CheckBox",{Label = "Show Climb Links",Command = "cl_nodegraph_tool_show_climb_links"})
-		self:AddControl("CheckBox",{Label = "Fullbright Nodes",Command = "cl_nodegraph_tool_fullbright"})
-		self:AddControl("CheckBox",{Label = "Plain Node Textures",Command = "cl_nodegraph_tool_plain_nodes"})
-		self:AddControl("CheckBox",{Label = "Plain Link Textures",Command = "cl_nodegraph_tool_plain_links"})
-		self:AddControl("CheckBox",{Label = "Always Render on Top",Command = "cl_nodegraph_tool_ignorez"})
-		self:AddControl("CheckBox",{Label = "Render Using Player Position",Command = "cl_nodegraph_tool_render_using_player_pos"})
+		self:AddControl("Slider",
+			{ type = "float", min = 0, max = 1, label = "Think Delay", Command = "cl_nodegraph_tool_think_delay" })
+		self:AddControl("CheckBox", { Label = "Show Node Preview", Command = "cl_nodegraph_tool_draw_preview" })
+		self:AddControl("CheckBox", { Label = "Show Ground Nodes", Command = "cl_nodegraph_tool_nodes_draw_ground" })
+		self:AddControl("CheckBox", { Label = "Show Air Nodes", Command = "cl_nodegraph_tool_nodes_draw_air" })
+		self:AddControl("CheckBox", { Label = "Show Climb Nodes", Command = "cl_nodegraph_tool_nodes_draw_climb" })
+		self:AddControl("CheckBox", { Label = "Show Hint Nodes", Command = "cl_nodegraph_tool_nodes_draw_hint" })
+		self:AddControl("CheckBox", { Label = "Show Normal Links", Command = "cl_nodegraph_tool_show_normal_links" })
+		self:AddControl("CheckBox", { Label = "Show Jump Links", Command = "cl_nodegraph_tool_show_jump_links" })
+		self:AddControl("CheckBox", { Label = "Show Fly Links", Command = "cl_nodegraph_tool_show_fly_links" })
+		self:AddControl("CheckBox", { Label = "Show Climb Links", Command = "cl_nodegraph_tool_show_climb_links" })
+		self:AddControl("CheckBox", { Label = "Fullbright Nodes", Command = "cl_nodegraph_tool_fullbright" })
+		self:AddControl("CheckBox", { Label = "Plain Node Textures", Command = "cl_nodegraph_tool_plain_nodes" })
+		self:AddControl("CheckBox", { Label = "Plain Link Textures", Command = "cl_nodegraph_tool_plain_links" })
+		self:AddControl("CheckBox", { Label = "Always Render on Top", Command = "cl_nodegraph_tool_ignorez" })
+		self:AddControl("CheckBox",
+			{ Label = "Render Using Player Position", Command = "cl_nodegraph_tool_render_using_player_pos" })
 
-		local values = {0,1,2,4,8,16,32,64,128,256,512}
+		local values = { 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 }
 		local snap = cvSnap:GetInt()
 		local pContainer = vgui.Create("DPanel", panel)
 		pContainer:SetTall(32)
@@ -2949,63 +2977,112 @@ if CLIENT then
 
 		self:AddItem(pContainer)
 
-		self:AddControl("Slider",{type = "int",min = 0,max = 4000,label = "Draw Distance",Command = "cl_nodegraph_tool_draw_distance"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 1000,label = "Air Node Distance",Command = "cl_nodegraph_tool_airnode_distance"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 1000,label = "Hint Node Distance",Command = "cl_nodegraph_tool_hintnode_distance"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 16,label = "Ground Offset Z",Command = "cl_nodegraph_tool_node_z"})
-		self:AddControl("Slider",{type = "int",min = 64,max = 1024,label = "Air Offset Z",Command = "cl_nodegraph_tool_node_air_z"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 16,label = "Snap Ground Offset Z",Command = "cl_nodegraph_tool_place_node_on_ground_offset"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 720,label = "Max Link Distance",Command = "cl_nodegraph_tool_max_link_distance"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 360,label = "Yaw",Command = "cl_nodegraph_tool_yaw"})
-		self:AddControl("CheckBox",{Label = "Show Yaw Arrow",Command = "cl_nodegraph_tool_nodes_show_yaw"})
-		self:AddControl("CheckBox",{Label = "Auto Adjust Yaw for Climb Nodes",Command = "cl_nodegraph_tool_yaw_auto"})
-		self:AddControl("CheckBox",{Label = "Check Link Visibility",Command = "cl_nodegraph_tool_check_visibility"})
-		self:AddControl("CheckBox",{Label = "Enable Step Check (Slow)",Command = "cl_nodegraph_tool_stepcheck_enable"})
-		self:AddControl("CheckBox",{Label = "Enable Node Projection (Slow)",Command = "cl_nodegraph_tool_nodeproj_enable"})
-		self:AddControl("CheckBox",{Label = "Use Bounding Box for Link Visibility",Command = "cl_nodegraph_tool_use_tracehull"})
-		self:AddControl("CheckBox",{Label = "Snap Node to Ground",Command = "cl_nodegraph_tool_place_node_on_ground"})
-		self:AddControl("CheckBox",{Label = "Use Bounding Box for Snap Node to Ground",Command = "cl_nodegraph_tool_place_node_on_ground_hull"})
-		self:AddControl("CheckBox",{Label = "Undo-able Nodes",Command = "cl_nodegraph_tool_undoable_nodes"})
-		self:AddControl("CheckBox",{Label = "Don't Select Different Node Type",Command = "cl_nodegraph_tool_dont_select_diff_node_type"})
-		self:AddControl("CheckBox",{Label = "Use Air Node Height Offset",Command = "cl_nodegraph_tool_node_air_z_enable"})
+		self:AddControl("Slider",
+			{ type = "int", min = 0, max = 4000, label = "Draw Distance", Command = "cl_nodegraph_tool_draw_distance" })
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 1000,
+				label = "Air Node Distance",
+				Command =
+				"cl_nodegraph_tool_airnode_distance"
+			})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 1000,
+				label = "Hint Node Distance",
+				Command =
+				"cl_nodegraph_tool_hintnode_distance"
+			})
+		self:AddControl("Slider",
+			{ type = "int", min = 0, max = 16, label = "Ground Offset Z", Command = "cl_nodegraph_tool_node_z" })
+		self:AddControl("Slider",
+			{ type = "int", min = 64, max = 1024, label = "Air Offset Z", Command = "cl_nodegraph_tool_node_air_z" })
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 16,
+				label = "Snap Ground Offset Z",
+				Command =
+				"cl_nodegraph_tool_place_node_on_ground_offset"
+			})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 720,
+				label = "Max Link Distance",
+				Command =
+				"cl_nodegraph_tool_max_link_distance"
+			})
+		self:AddControl("Slider", { type = "int", min = 0, max = 360, label = "Yaw", Command = "cl_nodegraph_tool_yaw" })
+		self:AddControl("CheckBox", { Label = "Show Yaw Arrow", Command = "cl_nodegraph_tool_nodes_show_yaw" })
+		self:AddControl("CheckBox", { Label = "Auto Adjust Yaw for Climb Nodes", Command = "cl_nodegraph_tool_yaw_auto" })
+		self:AddControl("CheckBox", { Label = "Check Link Visibility", Command = "cl_nodegraph_tool_check_visibility" })
+		self:AddControl("CheckBox",
+			{ Label = "Enable Step Check (Slow)", Command = "cl_nodegraph_tool_stepcheck_enable" })
+		self:AddControl("CheckBox",
+			{ Label = "Enable Node Projection (Slow)", Command = "cl_nodegraph_tool_nodeproj_enable" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Bounding Box for Link Visibility", Command = "cl_nodegraph_tool_use_tracehull" })
+		self:AddControl("CheckBox", { Label = "Snap Node to Ground", Command = "cl_nodegraph_tool_place_node_on_ground" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Bounding Box for Snap Node to Ground", Command = "cl_nodegraph_tool_place_node_on_ground_hull" })
+		self:AddControl("CheckBox", { Label = "Undo-able Nodes", Command = "cl_nodegraph_tool_undoable_nodes" })
+		self:AddControl("CheckBox",
+			{ Label = "Don't Select Different Node Type", Command = "cl_nodegraph_tool_dont_select_diff_node_type" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Air Node Height Offset", Command = "cl_nodegraph_tool_node_air_z_enable" })
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Mass Remove Settings"})
-		self:AddControl("Slider",{type = "int",min = 1,max = 1024,label = "Mass Remove Radius",Command = "cl_nodegraph_tool_massrem_radius"})
-		self:AddControl("CheckBox",{Label = "Use Player Position",Command = "cl_nodegraph_tool_massrem_useplyrpos"})
-		self:AddControl("CheckBox",{Label = "Remove Ground Nodes",Command = "cl_nodegraph_tool_massrem_grndnds"})
-		self:AddControl("CheckBox",{Label = "Remove Air Nodes",Command = "cl_nodegraph_tool_massrem_airnds"})
-		self:AddControl("CheckBox",{Label = "Remove Climb Nodes",Command = "cl_nodegraph_tool_massrem_climbnds"})
-		self:AddControl("CheckBox",{Label = "Remove Hint Nodes",Command = "cl_nodegraph_tool_massrem_hintnds"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Mass Remove Settings" })
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 1,
+				max = 1024,
+				label = "Mass Remove Radius",
+				Command =
+				"cl_nodegraph_tool_massrem_radius"
+			})
+		self:AddControl("CheckBox", { Label = "Use Player Position", Command = "cl_nodegraph_tool_massrem_useplyrpos" })
+		self:AddControl("CheckBox", { Label = "Remove Ground Nodes", Command = "cl_nodegraph_tool_massrem_grndnds" })
+		self:AddControl("CheckBox", { Label = "Remove Air Nodes", Command = "cl_nodegraph_tool_massrem_airnds" })
+		self:AddControl("CheckBox", { Label = "Remove Climb Nodes", Command = "cl_nodegraph_tool_massrem_climbnds" })
+		self:AddControl("CheckBox", { Label = "Remove Hint Nodes", Command = "cl_nodegraph_tool_massrem_hintnds" })
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Link Hull Types"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Link Hull Types" })
 		local selected = cvHullAuto:GetInt()
 		local lbl = vgui.Create("DLabel", panel)
-		lbl:SetColor(Color(0,0,0,255))
+		lbl:SetColor(Color(0, 0, 0, 255))
 		lbl:SetText("Method:")
 		local pCBox = vgui.Create("DComboBox", panel)
 		pCBox:SetSortItems(false)
-		pCBox:AddChoice("1. Manual",0,selected == 0)
-		pCBox:AddChoice("2. Auto",1,selected == 1)
+		pCBox:AddChoice("1. Manual", 0, selected == 0)
+		pCBox:AddChoice("2. Auto", 1, selected == 1)
 		pCBox.OnSelect = function(_, _, _, data)
-			RunConsoleCommand("cl_nodegraph_tool_hulltype_auto",data)
+			RunConsoleCommand("cl_nodegraph_tool_hulltype_auto", data)
 		end
 		pCBox:SetWide(170)
-		self:AddItem(lbl,pCBox)
-		self:AddControl("CheckBox",{Label = "HUMAN",Command = "cl_nodegraph_tool_hulltype_1"})
-		self:AddControl("CheckBox", {Label = "SMALL_CENTERED", Command = "cl_nodegraph_tool_hulltype_2"})
-		self:AddControl("CheckBox", {Label = "WIDE_HUMAN", Command = "cl_nodegraph_tool_hulltype_3"})
-		self:AddControl("CheckBox", {Label = "TINY", Command = "cl_nodegraph_tool_hulltype_4"})
-		self:AddControl("CheckBox", {Label = "WIDE_SHORT", Command = "cl_nodegraph_tool_hulltype_5"})
-		self:AddControl("CheckBox", {Label = "MEDIUM", Command = "cl_nodegraph_tool_hulltype_6"})
-		self:AddControl("CheckBox", {Label = "TINY_CENTERED", Command = "cl_nodegraph_tool_hulltype_7"})
-		self:AddControl("CheckBox", {Label = "LARGE", Command = "cl_nodegraph_tool_hulltype_8"})
-		self:AddControl("CheckBox", {Label = "LARGE_CENTERED", Command = "cl_nodegraph_tool_hulltype_9"})
-		self:AddControl("CheckBox", {Label = "MEDIUM_TALL", Command = "cl_nodegraph_tool_hulltype_10"})
+		self:AddItem(lbl, pCBox)
+		self:AddControl("CheckBox", { Label = "HUMAN", Command = "cl_nodegraph_tool_hulltype_1" })
+		self:AddControl("CheckBox", { Label = "SMALL_CENTERED", Command = "cl_nodegraph_tool_hulltype_2" })
+		self:AddControl("CheckBox", { Label = "WIDE_HUMAN", Command = "cl_nodegraph_tool_hulltype_3" })
+		self:AddControl("CheckBox", { Label = "TINY", Command = "cl_nodegraph_tool_hulltype_4" })
+		self:AddControl("CheckBox", { Label = "WIDE_SHORT", Command = "cl_nodegraph_tool_hulltype_5" })
+		self:AddControl("CheckBox", { Label = "MEDIUM", Command = "cl_nodegraph_tool_hulltype_6" })
+		self:AddControl("CheckBox", { Label = "TINY_CENTERED", Command = "cl_nodegraph_tool_hulltype_7" })
+		self:AddControl("CheckBox", { Label = "LARGE", Command = "cl_nodegraph_tool_hulltype_8" })
+		self:AddControl("CheckBox", { Label = "LARGE_CENTERED", Command = "cl_nodegraph_tool_hulltype_9" })
+		self:AddControl("CheckBox", { Label = "MEDIUM_TALL", Command = "cl_nodegraph_tool_hulltype_10" })
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Main Functions"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Main Functions" })
 		local pNoDoor = vgui.Create("DButton", panel)
 		pNoDoor:SetText("Remove All Doors")
 		local clicktime = 0
@@ -3030,7 +3107,8 @@ if CLIENT then
 			notification.AddLegacy("Nodegraph has been saved as 'data/nodegraph/" .. game.GetMap() .. ".txt'.", 0, 8)
 
 			if file.Exists("data/nodegraph/" .. game.GetMap() .. ".hint.json", "GAME") then
-				notification.AddLegacy("Hint Nodes has been saved as 'data/nodegraph/" .. game.GetMap() .. ".hint.json'.", 0, 8)
+				notification.AddLegacy(
+					"Hint Nodes has been saved as 'data/nodegraph/" .. game.GetMap() .. ".hint.json'.", 0, 8)
 			end
 
 			notification.AddLegacy("Successfully saved Nodegraph as AIN.", 0, 8)
@@ -3071,7 +3149,8 @@ if CLIENT then
 			end
 
 			if not file.Exists("data/nodegraph/" .. game.GetMap() .. ".vmf", "GAME") then
-				notification.AddLegacy("Place the VMF file for this map as 'data/nodegraph/" .. game.GetMap() .. ".vmf'.", 0, 8)
+				notification.AddLegacy(
+					"Place the VMF file for this map as 'data/nodegraph/" .. game.GetMap() .. ".vmf'.", 0, 8)
 				notification.AddLegacy("The map's VMF file can't be found!", 1, 8)
 
 				return
@@ -3293,14 +3372,19 @@ if CLIENT then
 		pClear:SetWide(110)
 		self:AddItem(pClear)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Nodeable Map Creation"})
-		self:AddControl("Label",{Text = [[If the status says "Not Nodeable", it means that the map will reject any custom nodegraph! You need to make the map nodeable first.
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Nodeable Map Creation" })
+		self:AddControl("Label",
+			{
+				Text =
+					[[If the status says "Not Nodeable", it means that the map will reject any custom nodegraph! You need to make the map nodeable first.
 
 		Depending on the size of the map and your computer's performance, this may freeze your game and could take a while.
 
-		This will create a nodeable map at ]] .. "data/nodegraph/" .. game.GetMap() .. ".bsp.dat."})
-		self:AddControl("Label",{Text = "Status: " .. (Helpers.IsMapNodeable() and "Already Nodeable" or "Not Nodeable")})
+		This will create a nodeable map at ]] .. "data/nodegraph/" .. game.GetMap() .. ".bsp.dat."
+			})
+		self:AddControl("Label",
+			{ Text = "Status: " .. (Helpers.IsMapNodeable() and "Already Nodeable" or "Not Nodeable") })
 
 		local pDump = vgui.Create("DButton", panel)
 		pDump:SetText("Create Nodeable Map")
@@ -3316,7 +3400,8 @@ if CLIENT then
 			end
 
 			if Helpers.GenerateNodeableMap() then
-				notification.AddLegacy("Successfully created a nodeable map at data/nodegraph/" .. game.GetMap() .. ".bsp.dat", 0, 8)
+				notification.AddLegacy(
+					"Successfully created a nodeable map at data/nodegraph/" .. game.GetMap() .. ".bsp.dat", 0, 8)
 			else
 				notification.AddLegacy("Failed to create a nodeable map.", 1, 8)
 			end
@@ -3324,16 +3409,16 @@ if CLIENT then
 		pDump:SetWide(110)
 		self:AddItem(pDump)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Zone Utilities"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Zone Utilities" })
 
-		self:AddControl("CheckBox",{Label = "Delete Ground Nodes",Command = "cl_nodegraph_tool_selectedzones_ground"})
-		self:AddControl("CheckBox",{Label = "Delete Air Nodes",Command = "cl_nodegraph_tool_selectedzones_air"})
-		self:AddControl("CheckBox",{Label = "Delete Climb Nodes",Command = "cl_nodegraph_tool_selectedzones_climb"})
-		self:AddControl("CheckBox",{Label = "Delete Hint Nodes",Command = "cl_nodegraph_tool_selectedzones_hint"})
+		self:AddControl("CheckBox", { Label = "Delete Ground Nodes", Command = "cl_nodegraph_tool_selectedzones_ground" })
+		self:AddControl("CheckBox", { Label = "Delete Air Nodes", Command = "cl_nodegraph_tool_selectedzones_air" })
+		self:AddControl("CheckBox", { Label = "Delete Climb Nodes", Command = "cl_nodegraph_tool_selectedzones_climb" })
+		self:AddControl("CheckBox", { Label = "Delete Hint Nodes", Command = "cl_nodegraph_tool_selectedzones_hint" })
 
 		self:TextEntry("Selected Zones", "cl_nodegraph_tool_selectedzones")
-		self:AddControl("Label",{Text = "Enter zone numbers to delete, separated by commas. For example: 4,5,6"})
+		self:AddControl("Label", { Text = "Enter zone numbers to delete, separated by commas. For example: 4,5,6" })
 
 		local pBuildZones = vgui.Create("DButton", panel)
 		pBuildZones:SetText("Build Zones")
@@ -3379,25 +3464,53 @@ if CLIENT then
 		pDelSelectedZones:SetWide(110)
 		self:AddItem(pDelSelectedZones)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Ground Node Generation"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Ground Node Generation" })
 
-		self:AddControl("Slider",{type = "int",min = 0,max = 10000,label = "Nav Min Area Size",Command = "cl_nodegraph_tool_gen_ground_navareasize"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 720,label = "Max Link Distance",Command = "cl_nodegraph_tool_gen_ground_link_distance"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 16,label = "Node Offset Z",Command = "cl_nodegraph_tool_gen_ground_node_z"})
-		self:AddControl("CheckBox",{Label = "Use Navmesh Links",Command = "cl_nodegraph_tool_gen_ground_navlinks"})
-		self:AddControl("CheckBox",{Label = "Use Bounding Box for Link Generation",Command = "cl_nodegraph_tool_gen_ground_link_tracehull"})
-		self:AddControl("CheckBox",{Label = "Enable Step Check (Slow)",Command = "cl_nodegraph_tool_gen_ground_stepcheck_enable"})
-		self:AddControl("CheckBox",{Label = "Enable Node Projection (Slow)",Command = "cl_nodegraph_tool_gen_ground_nodeproj_enable"})
-		self:AddControl("CheckBox",{Label = "Only Keep Largest Zone",Command = "cl_nodegraph_tool_gen_ground_onlykeeplargestzone"})
-		self:AddControl("CheckBox",{Label = "Generate Jump Links",Command = "cl_nodegraph_tool_gen_ground_jump_links"})
-		self:AddControl("CheckBox",{Label = "Apply Jump Hints to Nodes",Command = "cl_nodegraph_tool_gen_ground_jump_hints"})
-		self:AddControl("CheckBox",{Label = "Allow Generating on Crouch Nav Areas",Command = "cl_nodegraph_tool_gen_ground_allow_crouch"})
-		self:AddControl("CheckBox",{Label = "Allow Generating on Jump Nav Areas",Command = "cl_nodegraph_tool_gen_ground_allow_jump"})
-		self:AddControl("CheckBox",{Label = "Allow Generating on Water",Command = "cl_nodegraph_tool_gen_ground_allow_water"})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 10000,
+				label = "Nav Min Area Size",
+				Command =
+				"cl_nodegraph_tool_gen_ground_navareasize"
+			})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 720,
+				label = "Max Link Distance",
+				Command =
+				"cl_nodegraph_tool_gen_ground_link_distance"
+			})
+		self:AddControl("Slider",
+			{ type = "int", min = 0, max = 16, label = "Node Offset Z", Command = "cl_nodegraph_tool_gen_ground_node_z" })
+		self:AddControl("CheckBox", { Label = "Use Navmesh Links", Command = "cl_nodegraph_tool_gen_ground_navlinks" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Bounding Box for Link Generation", Command = "cl_nodegraph_tool_gen_ground_link_tracehull" })
+		self:AddControl("CheckBox",
+			{ Label = "Enable Step Check (Slow)", Command = "cl_nodegraph_tool_gen_ground_stepcheck_enable" })
+		self:AddControl("CheckBox",
+			{ Label = "Enable Node Projection (Slow)", Command = "cl_nodegraph_tool_gen_ground_nodeproj_enable" })
+		self:AddControl("CheckBox",
+			{ Label = "Only Keep Largest Zone", Command = "cl_nodegraph_tool_gen_ground_onlykeeplargestzone" })
+		self:AddControl("CheckBox",
+			{ Label = "Generate Jump Links", Command = "cl_nodegraph_tool_gen_ground_jump_links" })
+		self:AddControl("CheckBox",
+			{ Label = "Apply Jump Hints to Nodes", Command = "cl_nodegraph_tool_gen_ground_jump_hints" })
+		self:AddControl("CheckBox",
+			{ Label = "Allow Generating on Crouch Nav Areas", Command = "cl_nodegraph_tool_gen_ground_allow_crouch" })
+		self:AddControl("CheckBox",
+			{ Label = "Allow Generating on Jump Nav Areas", Command = "cl_nodegraph_tool_gen_ground_allow_jump" })
+		self:AddControl("CheckBox",
+			{ Label = "Allow Generating on Water", Command = "cl_nodegraph_tool_gen_ground_allow_water" })
 
-		self:AddControl("Label",{Text = [[This feature requires a Navmesh to be present on the map!
-		Pressing this button will clear Ground Nodes and start the generation. May freeze your game for a while. Please be patient.]]})
+		self:AddControl("Label", {
+			Text = [[This feature requires a Navmesh to be present on the map!
+		Pressing this button will clear Ground Nodes and start the generation. May freeze your game for a while. Please be patient.]]
+		})
 		local pGenerate = vgui.Create("DButton", panel)
 		pGenerate:SetText("Generate Ground Nodes")
 		pGenerate.DoClick = function()
@@ -3411,17 +3524,33 @@ if CLIENT then
 		pGenerate:SetWide(110)
 		self:AddItem(pGenerate)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Grid Ground Node Generation"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Grid Ground Node Generation" })
 
-		self:AddControl("Slider",{type = "int",min = 64,max = 1024,label = "Grid Step",Command = "cl_nodegraph_tool_gen_grid_step"})
-		self:AddControl("Slider",{type = "int",min = 512,max = 8192,label = "Grid Range",Command = "cl_nodegraph_tool_gen_grid_range"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 16,label = "Node Offset Z",Command = "cl_nodegraph_tool_gen_grid_height_offset"})
-		self:AddControl("CheckBox",{Label = "Use Range",Command = "cl_nodegraph_tool_gen_grid_range_enabled"})
-		self:AddControl("CheckBox",{Label = "Remove Existing Nodes",Command = "cl_nodegraph_tool_gen_grid_removenodes"})
-		self:AddControl("CheckBox",{Label = "Allow Generating on Water",Command = "cl_nodegraph_tool_gen_grid_allowwater"})
+		self:AddControl("Slider",
+			{ type = "int", min = 64, max = 1024, label = "Grid Step", Command = "cl_nodegraph_tool_gen_grid_step" })
+		self:AddControl("Slider",
+			{ type = "int", min = 512, max = 8192, label = "Grid Range", Command = "cl_nodegraph_tool_gen_grid_range" })
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 16,
+				label = "Node Offset Z",
+				Command =
+				"cl_nodegraph_tool_gen_grid_height_offset"
+			})
+		self:AddControl("CheckBox", { Label = "Use Range", Command = "cl_nodegraph_tool_gen_grid_range_enabled" })
+		self:AddControl("CheckBox",
+			{ Label = "Remove Existing Nodes", Command = "cl_nodegraph_tool_gen_grid_removenodes" })
+		self:AddControl("CheckBox",
+			{ Label = "Allow Generating on Water", Command = "cl_nodegraph_tool_gen_grid_allowwater" })
 
-		self:AddControl("Label",{Text = "Pressing this button will prompt you to shoot at a position as a starting point, which then will initiate the generation. Press this button again to cancel it. May freeze your game for a while. Please be patient."})
+		self:AddControl("Label",
+			{
+				Text =
+				"Pressing this button will prompt you to shoot at a position as a starting point, which then will initiate the generation. Press this button again to cancel it. May freeze your game for a while. Please be patient."
+			})
 		local pGenGrid = vgui.Create("DButton", panel)
 		pGenGrid:SetText("Generate Ground Nodes")
 		pGenGrid.DoClick = function()
@@ -3442,19 +3571,35 @@ if CLIENT then
 		pGenGrid:SetWide(110)
 		self:AddItem(pGenGrid)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Air Node Generation"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Air Node Generation" })
 
-		self:AddControl("Slider",{type = "int",min = 0,max = 720,label = "Max Link Distance",Command = "cl_nodegraph_tool_gen_air_link_distance"})
-		self:AddControl("Slider",{type = "int",min = 64,max = 512,label = "Node Height",Command = "cl_nodegraph_tool_gen_air_height"})
-		self:AddControl("CheckBox",{Label = "Use Ground Node Links",Command = "cl_nodegraph_tool_gen_air_ground_links"})
-		self:AddControl("CheckBox",{Label = "Enable Node Projection (Slow)",Command = "cl_nodegraph_tool_gen_air_nodeproj_enable"})
-		self:AddControl("CheckBox",{Label = "Only Keep Largest Zone",Command = "cl_nodegraph_tool_gen_air_onlykeeplargestzone"})
-		self:AddControl("CheckBox",{Label = "Use Bounding Box for Link Generation",Command = "cl_nodegraph_tool_gen_air_link_tracehull"})
-		self:AddControl("CheckBox",{Label = "Set All Nodes as Strider Node",Command = "cl_nodegraph_tool_gen_air_strider_node"})
-		self:AddControl("Label",{Text = [[This feature requires Ground Nodes to be present on the map!
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 720,
+				label = "Max Link Distance",
+				Command =
+				"cl_nodegraph_tool_gen_air_link_distance"
+			})
+		self:AddControl("Slider",
+			{ type = "int", min = 64, max = 512, label = "Node Height", Command = "cl_nodegraph_tool_gen_air_height" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Ground Node Links", Command = "cl_nodegraph_tool_gen_air_ground_links" })
+		self:AddControl("CheckBox",
+			{ Label = "Enable Node Projection (Slow)", Command = "cl_nodegraph_tool_gen_air_nodeproj_enable" })
+		self:AddControl("CheckBox",
+			{ Label = "Only Keep Largest Zone", Command = "cl_nodegraph_tool_gen_air_onlykeeplargestzone" })
+		self:AddControl("CheckBox",
+			{ Label = "Use Bounding Box for Link Generation", Command = "cl_nodegraph_tool_gen_air_link_tracehull" })
+		self:AddControl("CheckBox",
+			{ Label = "Set All Nodes as Strider Node", Command = "cl_nodegraph_tool_gen_air_strider_node" })
+		self:AddControl("Label", {
+			Text = [[This feature requires Ground Nodes to be present on the map!
 
-		Pressing this button will clear Air Nodes and start the generation. May freeze your game for a while. Please be patient.]]})
+		Pressing this button will clear Air Nodes and start the generation. May freeze your game for a while. Please be patient.]]
+		})
 		local pGenerateAir = vgui.Create("DButton", panel)
 		pGenerateAir:SetText("Generate Air Nodes")
 		pGenerateAir.DoClick = function()
@@ -3472,14 +3617,34 @@ if CLIENT then
 		pGenerateAir:SetWide(110)
 		self:AddItem(pGenerateAir)
 
-		self:AddControl("Label",{Text = "  "})
-		self:AddControl("Label",{Text = "Jump Link Generation"})
+		self:AddControl("Label", { Text = "  " })
+		self:AddControl("Label", { Text = "Jump Link Generation" })
 
-		self:AddControl("Slider",{type = "int",min = 18,max = 256,label = "Min Jump Height",Command = "cl_nodegraph_tool_gen_jump_min_height"})
-		self:AddControl("Slider",{type = "int",min = 0,max = 720,label = "Max Link Distance",Command = "cl_nodegraph_tool_gen_jump_link_distance"})
-		self:AddControl("CheckBox",{Label = "Use Bounding Box",Command = "cl_nodegraph_tool_gen_jump_tracehull"})
-		self:AddControl("CheckBox",{Label = "Apply Jump Hints to Nodes",Command = "cl_nodegraph_tool_gen_jump_hints"})
-		self:AddControl("Label",{Text = "Pressing this button will clear Jump Links and start the generation. May freeze your game for a while. Please be patient."})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 18,
+				max = 256,
+				label = "Min Jump Height",
+				Command =
+				"cl_nodegraph_tool_gen_jump_min_height"
+			})
+		self:AddControl("Slider",
+			{
+				type = "int",
+				min = 0,
+				max = 720,
+				label = "Max Link Distance",
+				Command =
+				"cl_nodegraph_tool_gen_jump_link_distance"
+			})
+		self:AddControl("CheckBox", { Label = "Use Bounding Box", Command = "cl_nodegraph_tool_gen_jump_tracehull" })
+		self:AddControl("CheckBox", { Label = "Apply Jump Hints to Nodes", Command = "cl_nodegraph_tool_gen_jump_hints" })
+		self:AddControl("Label",
+			{
+				Text =
+				"Pressing this button will clear Jump Links and start the generation. May freeze your game for a while. Please be patient."
+			})
 		local pGenerateJumpLinks = vgui.Create("DButton", panel)
 		pGenerateJumpLinks:SetText("Generate Jump Links")
 		pGenerateJumpLinks.DoClick = function()
@@ -3498,6 +3663,10 @@ if CLIENT then
 		self:AddItem(pGenerateJumpLinks)
 	end
 end
+
+--/////////////////////////////////////////////
+-- SERVER-SIDE CODE
+--/////////////////////////////////////////////
 
 if SERVER then
 	util.AddNetworkString("nodegraph_gen_server")
@@ -3518,7 +3687,7 @@ if SERVER then
 			return
 		end
 
-		ent._hint = ent._hint or {ID = (cls == "info_hint" and ent:EntIndex() or nil)}
+		ent._hint = ent._hint or { ID = (cls == "info_hint" and ent:EntIndex() or nil) }
 
 		if key == "nodeid" then
 			ent._hint.ID = tostring(value)
@@ -3798,12 +3967,12 @@ if SERVER then
 		local nodeID = net.ReadUInt(14)
 
 		undo.Create("Node")
-			undo.AddFunction(function()
-				net.Start("cl_nodegrapheditor_undo_node")
-					net.WriteUInt(nodeID, 14)
-				net.Send(pl)
-			end)
-			undo.SetPlayer(pl)
+		undo.AddFunction(function()
+			net.Start("cl_nodegrapheditor_undo_node")
+			net.WriteUInt(nodeID, 14)
+			net.Send(pl)
+		end)
+		undo.SetPlayer(pl)
 		undo.Finish()
 	end)
 
@@ -3816,20 +3985,20 @@ if SERVER then
 			local fc = ...
 
 			net.Start("wrench_t_call")
-				net.WriteString(self:GetMode())
-				net.WriteUInt(fc, 5)
+			net.WriteString(self:GetMode())
+			net.WriteUInt(fc, 5)
 
-				if fc <= 1 then
-					local tr = select(2, ...)
+			if fc <= 1 then
+				local tr = select(2, ...)
 
-					for i = 1, 3 do
-						net.WriteDouble(tr.StartPos[i])
-					end
-
-					for i = 1, 3 do
-						net.WriteDouble(tr.HitPos[i])
-					end
+				for i = 1, 3 do
+					net.WriteDouble(tr.StartPos[i])
 				end
+
+				for i = 1, 3 do
+					net.WriteDouble(tr.HitPos[i])
+				end
+			end
 			net.Send(self:GetOwner())
 		end
 	end
