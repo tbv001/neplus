@@ -555,10 +555,11 @@ if CLIENT then
 			net.SendToServer()
 		end
 
-		if (numNodes == 7950 or numNodes == 8000 or numNodes == 8150) and createType ~= Constants.NODE_TYPE_HINT then
-			notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. Constants.MAX_NODES .. ").",
+		local maxNodes = Constants.MAX_NODES
+		if (numNodes == math.floor(maxNodes * 0.85) or numNodes == math.floor(maxNodes * 0.90) or numNodes == math.floor(maxNodes * 0.95)) and createType ~= Constants.NODE_TYPE_HINT then
+			notification.AddLegacy("You are close to the node limit (" .. numNodes .. "/" .. maxNodes .. ").",
 				0, 8)
-		elseif numNodes == Constants.MAX_NODES and createType ~= Constants.NODE_TYPE_HINT then
+		elseif numNodes == maxNodes and createType ~= Constants.NODE_TYPE_HINT then
 			notification.AddLegacy("You have reached the node limit.", 0, 8)
 		end
 	end
