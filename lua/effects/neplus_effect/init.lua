@@ -1,21 +1,17 @@
-local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez", "0", true)
-local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright", "1", true)
-local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes", "0", true)
+local DebugWhiteMat = Material("models/debug/debugwhite")
+local RedColor = Color(255, 0, 0, 255)
+local WhiteColor = Color(255, 255, 255, 255)
 
-local debugWhiteMat = Material("models/debug/debugwhite")
-local redColor = Color(255,0,0,255)
-local whiteColor = Color(255,255,255,255)
-
-local nodeTypeColors = {
-	[2] = {255, 255, 0},
-	[3] = {255, 255, 0},
-	[4] = {24, 189, 157},
-	[5] = {224, 128, 8},
-	[6] = {224, 128, 8},
-	[7] = {255, 255, 255}
+local NodeTypeColors = {
+	[2] = { 255, 255, 0 },
+	[3] = { 255, 255, 0 },
+	[4] = { 24, 189, 157 },
+	[5] = { 224, 128, 8 },
+	[6] = { 224, 128, 8 },
+	[7] = { 255, 255, 255 }
 }
 
-local nodeTypes = {
+local NodeTypes = {
 	-- Normal types
 	[2] = "models/editor/ground_node.mdl",
 	[3] = "models/editor/air_node.mdl",
@@ -27,6 +23,10 @@ local nodeTypes = {
 	[7] = "models/editor/node_hint.mdl"
 }
 
+local ignoreDepth = CreateClientConVar("cl_nodegraph_tool_ignorez", "0", true)
+local fullBright = CreateClientConVar("cl_nodegraph_tool_fullbright", "1", true)
+local plainNodes = CreateClientConVar("cl_nodegraph_tool_plain_nodes", "0", true)
+
 function EFFECT:Init(data)
 	local type = data:GetMagnitude() or 2
 	self.EffectName = "neplus_effect"
@@ -35,20 +35,20 @@ end
 
 function EFFECT:SetType(type)
 	self.m_type = type
-	self:SetModel(nodeTypes[type] or nodeTypes[2])
+	self:SetModel(NodeTypes[type] or NodeTypes[2])
 end
 
 function EFFECT:GetType()
 	return self.m_type
 end
 
-function EFFECT:SetNode(node,nodeID)
+function EFFECT:SetNode(node, nodeID)
 	self.m_node = node
 	self.m_nodeID = nodeID
 end
 
 function EFFECT:GetNode()
-	return self.m_node,self.m_nodeID
+	return self.m_node, self.m_nodeID
 end
 
 function EFFECT:Think()
@@ -82,20 +82,20 @@ function EFFECT:Render()
 		local curColor = self:GetColor()
 		local isSelected = curColor.r == 255 and curColor.g == 0 and curColor.b == 0 and curColor.a == 255
 		if plain then
-			local col = nodeTypeColors[nodeType] or {255,255,255}
+			local col = NodeTypeColors[nodeType] or { 255, 255, 255 }
 			if isSelected then
 				if curColor.r ~= 255 or curColor.g ~= 0 or curColor.b ~= 0 then
-					self:SetColor(redColor)
+					self:SetColor(RedColor)
 				end
 			else
 				if curColor.r ~= col[1] or curColor.g ~= col[2] or curColor.b ~= col[3] then
 					self:SetColor(Color(col[1], col[2], col[3], 255))
 				end
 			end
-			render.MaterialOverride(debugWhiteMat)
+			render.MaterialOverride(DebugWhiteMat)
 		elseif not isSelected then
 			if curColor.r ~= 255 or curColor.g ~= 255 or curColor.b ~= 255 or curColor.a ~= 255 then
-				self:SetColor(whiteColor)
+				self:SetColor(WhiteColor)
 			end
 		end
 
