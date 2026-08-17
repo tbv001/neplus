@@ -612,10 +612,8 @@ if CLIENT then
 	net.Receive("nodegraph_gen_client", function()
 		local totalChunks = net.ReadUInt(16)
 		local chunkIndex = net.ReadUInt(16)
-		local fullSize = net.ReadUInt(32)
 		local chunkSize = net.ReadUInt(32)
 		local chunkData = net.ReadData(chunkSize)
-
 		if chunkIndex == 1 then
 			expectedChunks = totalChunks
 			receivedChunks = {}
@@ -3806,7 +3804,6 @@ if SERVER then
 		end
 
 		local genSettings = net.ReadTable()
-
 		if not genSettings then
 			return
 		end
@@ -3819,7 +3816,6 @@ if SERVER then
 			local startPos = (i - 1) * chunkSize + 1
 			local endPos = math.min(i * chunkSize, #compressed)
 			local chunkData = string.sub(compressed, startPos, endPos)
-
 			timer.Simple(i * 0.1, function()
 				if not IsValid(plyEntity) then
 					return
@@ -3828,7 +3824,6 @@ if SERVER then
 				net.Start("nodegraph_gen_client")
 				net.WriteUInt(totalChunks, 16)
 				net.WriteUInt(i, 16)
-				net.WriteUInt(#compressed, 32)
 				net.WriteUInt(#chunkData, 32)
 				net.WriteData(chunkData, #chunkData)
 				net.Send(plyEntity)
