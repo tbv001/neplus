@@ -142,7 +142,6 @@ function Nodegraph:ParseFile(filePath, gamePath)
 	nodegraph.links = links
 	nodegraph.lookup = lookup
 	self.m_nodegraph = nodegraph
-
 	return nodegraph
 end
 
@@ -269,7 +268,6 @@ end
 
 function Nodegraph:RemoveNode(nodeID)
 	local nodes = self:GetNodes()
-
 	if not nodes[nodeID] then
 		return
 	end
@@ -408,7 +406,6 @@ function Nodegraph:FloodFillZone(startNode, zone)
 	end
 
 	local stack = { startNode }
-
 	while #stack > 0 do
 		local node = table.remove(stack)
 		if node.zone == Constants.AI_NODE_ZONE_UNKNOWN then
@@ -673,7 +670,6 @@ function Nodegraph:SaveAsENT(filePath)
 		local link = links[k]
 		local newSrc = nodeIDs[link.srcID]
 		local newDest = nodeIDs[link.destID]
-
 		if newSrc and newDest then
 			links[k] = nil
 			links[linkID] = link
@@ -794,11 +790,10 @@ function Nodegraph:SaveToVMF(filePath)
 		existingFile:Close()
 	end
 
-	local function removeNodeEntities(content)
+	local function RemoveNodeEntities(content)
 		local result = ""
 		local i = 1
 		local len = string.len(content)
-
 		while i <= len do
 			local entityStart, entityEnd = string.find(content, "entity", i)
 
@@ -810,7 +805,6 @@ function Nodegraph:SaveToVMF(filePath)
 			result = result .. string.sub(content, i, entityStart - 1)
 
 			local braceStart = string.find(content, "{", entityEnd)
-
 			if not braceStart then
 				result = result .. string.sub(content, entityStart, entityEnd)
 				i = entityEnd + 1
@@ -833,7 +827,6 @@ function Nodegraph:SaveToVMF(filePath)
 				end
 
 				local shouldRemove = false
-
 				if string.find(entityContent, "\"classname\"%s+\"info_node\"") or
 					string.find(entityContent, "\"classname\"%s+\"info_node_air\"") or
 					string.find(entityContent, "\"classname\"%s+\"info_node_hint\"") or
@@ -854,7 +847,7 @@ function Nodegraph:SaveToVMF(filePath)
 		return result
 	end
 
-	vmfContent = removeNodeEntities(vmfContent)
+	vmfContent = RemoveNodeEntities(vmfContent)
 
 	local outputFile = string.gsub(filePath, "%.vmf$", ".vmf.txt")
 	local fileHandle = file.Open(outputFile, "wb", "DATA")
@@ -916,7 +909,6 @@ function Nodegraph:SaveToVMF(filePath)
 
 	for i = 1, #nodes do
 		local node = nodes[i]
-
 		if (node.type == Constants.NODE_TYPE_GROUND or node.type == Constants.NODE_TYPE_AIR) and node.hint == 0 then
 			fileHandle:Write("entity\n")
 			fileHandle:Write("{\n")
@@ -947,10 +939,8 @@ function Nodegraph:SaveToVMF(filePath)
 
 			if node.type == Constants.NODE_TYPE_CLIMB then
 				local success = false
-
 				for j = 1, #node.link do
 					local link = node.link[j]
-
 					if link.move and table.HasValue(link.move, 8) then
 						if nodes[link.destID] and nodes[link.destID].type ~= Constants.NODE_TYPE_CLIMB then
 							continue
@@ -967,10 +957,8 @@ function Nodegraph:SaveToVMF(filePath)
 				end
 			elseif node.type == Constants.NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
-
 				for j = 1, #node.link do
 					local link = node.link[j]
-
 					if link.move and table.HasValue(link.move, 2) then
 						if nodes[link.destID] and nodes[link.destID].hint ~= 901 then
 							continue

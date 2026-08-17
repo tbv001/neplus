@@ -103,9 +103,9 @@ local function RemoveEntities()
 		return
 	end
 
-	local x = ents.FindByClass("func_brush")
-	for i = 1, #x do
-		local v = x[i]
+	local funcBrushEnts = ents.FindByClass("func_brush")
+	for i = 1, #funcBrushEnts do
+		local v = funcBrushEnts[i]
 		v:Fire("break")
 		v:Fire("disable")
 		if string.find(v:GetName(), "door") then
@@ -122,9 +122,9 @@ local function RemoveEntities()
 		RunConsoleCommand("ent_remove_all", "func_brush")
 	end
 
-	local x = ents.FindByClass("prop_dynamic")
-	for i = 1, #x do
-		local v = x[i]
+	local propDynamicEnts = ents.FindByClass("prop_dynamic")
+	for i = 1, #propDynamicEnts do
+		local v = propDynamicEnts[i]
 		local nm = v:GetName()
 		if string.find(nm, "door") or string.find(nm, "barrier") or nm == "cap2_signs_back_props" then
 			v:Remove()
