@@ -1818,7 +1818,7 @@ if CLIENT then
 				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			-- Time elapsed
-			local timeText = "Time elapsed: " .. math.Round(self:GenerationTimeElapsed()) .. "s"
+			local timeText = "Time elapsed: " .. Helpers.ConvertTime(self:GenerationTimeElapsed())
 			draw.SimpleText(timeText, "NEPlusFont", width * 0.5, yOffset + 70, Color(200, 200, 200),
 				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 

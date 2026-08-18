@@ -142,4 +142,21 @@ function Helpers.OpenAndRemoveDoors()
 	end)
 end
 
+function Helpers.ConvertTime(time)
+	time = math.Round(time)
+	local s = time % 60
+	local m = math.floor(time / 60) % 60
+	local h = math.floor(time / 3600)
+
+	if h > 0 then
+		return string.format("%02d:%02d:%02d", h, m, s)
+	end
+
+	if m > 0 then
+		return string.format("%02d:%02d", m, s)
+	end
+
+	return string.format("%01d:%02d", m, s)
+end
+
 return Helpers

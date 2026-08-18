@@ -1,5 +1,6 @@
 local Constants = include("neplus/constants.lua")
 local Math = include("neplus/math.lua")
+local Helpers = include("neplus/helpers.lua")
 
 local Generation = {}
 
@@ -69,7 +70,7 @@ if CLIENT then
 		end
 
 		if notifyUser then
-			notification.AddLegacy("Cancelled generation.", 0, 8)
+			LocalPlayer():ChatPrint("[Nodegraph Editor+] Cancelled generation.")
 		end
 
 		currentTool = nil
@@ -88,12 +89,14 @@ if CLIENT then
 			Generation.CancelTask(tool, true)
 		end
 
+		local ply = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		Generation.IsGenerating = true
 		Generation.TimeElapsed = 0
 		taskStartTime = SysTime()
 		currentTool = tool
 
 		local lastYieldTime = SysTime()
+		local nextProgressPrint = taskStartTime + 5
 		local function YieldCheck(force)
 			if not Generation.IsGenerating then
 				coroutine.yield("cancelled")
@@ -113,8 +116,9 @@ if CLIENT then
 			local success, result = pcall(taskFunc, YieldCheck)
 			if not success then
 				ErrorNoHalt("[Nodegraph Editor+] Generation Error: " .. tostring(result) .. "\n")
-				notification.AddLegacy("Generation failed with an error.", 1, 8)
+				ply:ChatPrint("[Nodegraph Editor+] Generation failed with an error.")
 			end
+
 			return success, result
 		end)
 
@@ -128,6 +132,20 @@ if CLIENT then
 			end
 
 			Generation.TimeElapsed = SysTime() - taskStartTime
+
+			if SysTime() >= nextProgressPrint then
+				local nodes = currentTool and currentTool.GetNodes and currentTool:GetNodes()
+				local nodegraph = currentTool and currentTool.GetNodegraph and currentTool:GetNodegraph()
+				local nodeCount = (nodegraph and nodes and nodegraph:CountNodes(nodes)) or (nodes and table.Count(nodes)) or
+					0
+				local targetPly = IsValid(ply) and ply or LocalPlayer()
+				if IsValid(targetPly) then
+					targetPly:ChatPrint("[Nodegraph Editor+] Generating... (" ..
+						nodeCount ..
+						"/" .. Constants.MAX_NODES .. ") (" .. Helpers.ConvertTime(Generation.TimeElapsed) .. ")")
+				end
+				nextProgressPrint = SysTime() + 5
+			end
 
 			local tickStart = SysTime()
 			while (SysTime() - tickStart) < TimeBudget do
@@ -166,7 +184,7 @@ if CLIENT then
 					end
 
 					currentTool = nil
-					notification.AddLegacy("Generation failed with an error.", 1, 8)
+					ply:ChatPrint("[Nodegraph Editor+] Generation failed with an error.")
 					return
 				end
 
@@ -372,16 +390,17 @@ if CLIENT then
 			return
 		end
 
+		local ply = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local nodes = tool:GetNodes()
 		local nodegraph = tool:GetNodegraph()
 		local nodeGrid = tool:GetNodeGrid()
 
 		if not posTable or #posTable <= 0 then
-			notification.AddLegacy("No navmesh found. Please generate one first before using.", 0, 8)
+			ply:ChatPrint("[Nodegraph Editor+] No navmesh found. Please generate one first before using.")
 			return
 		end
 
-		notification.AddLegacy("Starting ground node generation from navmesh...", 0, 8)
+		ply:ChatPrint("[Nodegraph Editor+] Starting ground node generation from navmesh...")
 
 		StartTask(tool, function(YieldCheck)
 			for id, node in pairs(nodes) do
@@ -507,11 +526,10 @@ if CLIENT then
 
 			Generation.TimeElapsed = SysTime() - taskStartTime
 			if generatedCount > 0 then
-				notification.AddLegacy(
-					"Successfully generated " .. generatedCount .. " ground nodes in " ..
-					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
+				ply:ChatPrint("[Nodegraph Editor+] Successfully generated " ..
+					generatedCount .. " ground nodes in " .. Helpers.ConvertTime(Generation.TimeElapsed) .. ".")
 			else
-				notification.AddLegacy("Failed to generate ground nodes.", 1, 8)
+				ply:ChatPrint("[Nodegraph Editor+] Failed to generate ground nodes.")
 			end
 		end)
 	end
@@ -521,12 +539,13 @@ if CLIENT then
 			return
 		end
 
+		local ply = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local nodes = tool:GetNodes()
 		local nodegraph = tool:GetNodegraph()
 		local nodeGrid = tool:GetNodeGrid()
 		local traceMask = tool.GetTraceMask and tool:GetTraceMask() or MASK_NPCWORLDSTATIC
 
-		notification.AddLegacy("Starting air node generation...", 0, 8)
+		ply:ChatPrint("[Nodegraph Editor+] Starting air node generation...")
 
 		StartTask(tool, function(YieldCheck)
 			local groundData = {}
@@ -610,7 +629,6 @@ if CLIENT then
 					local validPos = endPos
 					local numNodes = nodegraph:CountNodes(nodes)
 					if numNodes >= Constants.MAX_NODES then
-						notification.AddLegacy("Reached the maximum node limit. Can't generate more air nodes.", 0, 8)
 						break
 					end
 
@@ -700,12 +718,11 @@ if CLIENT then
 			count = count - (removedNodes or 0)
 			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy(
-					"Successfully generated " .. count .. " air nodes in " ..
-					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
+				ply:ChatPrint("[Nodegraph Editor+] Successfully generated " ..
+					count .. " air nodes in " .. Helpers.ConvertTime(Generation.TimeElapsed) .. ".")
 			else
-				notification.AddLegacy(
-					"Failed to generate air nodes. Either no ground nodes found, or no space for air nodes.", 1, 8)
+				ply:ChatPrint(
+					"[Nodegraph Editor+] Failed to generate air nodes. Either no ground nodes found, or no space for air nodes.")
 			end
 
 			tool:BuildNodeGrid()
@@ -726,7 +743,7 @@ if CLIENT then
 		local pl = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local count = 0
 
-		notification.AddLegacy("Starting jump link generation...", 0, 8)
+		pl:ChatPrint("[Nodegraph Editor+] Starting jump link generation...")
 
 		StartTask(tool, function(YieldCheck)
 			tool:RemoveLinksWithType(2)
@@ -810,11 +827,10 @@ if CLIENT then
 
 			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy(
-					"Successfully generated " .. count .. " jump links in " ..
-					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
+				pl:ChatPrint("[Nodegraph Editor+] Successfully generated " ..
+					count .. " jump links in " .. Helpers.ConvertTime(Generation.TimeElapsed) .. ".")
 			else
-				notification.AddLegacy("Failed to generate jump links.", 1, 8)
+				pl:ChatPrint("[Nodegraph Editor+] Failed to generate jump links.")
 			end
 		end)
 	end
@@ -856,7 +872,7 @@ if CLIENT then
 			maxX, maxY, maxZ = maxs.x, maxs.y, maxs.z
 		end
 
-		notification.AddLegacy("Starting ground node generation using grid...", 0, 8)
+		pl:ChatPrint("[Nodegraph Editor+] Starting ground node generation using grid...")
 
 		StartTask(tool, function(YieldCheck)
 			if Generation.cvGrndGenGridRemNodes:GetBool() then
@@ -893,7 +909,6 @@ if CLIENT then
 
 			for i = 1, #candidates do
 				if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
-					notification.AddLegacy("Reached node limit. Stopped adding more nodes.", 1, 8)
 					break
 				end
 
@@ -989,11 +1004,10 @@ if CLIENT then
 
 			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy(
-					"Generated " .. count .. " ground nodes from grid in " ..
-					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
+				pl:ChatPrint("[Nodegraph Editor+] Generated " .. count ..
+					" ground nodes from grid in " .. Helpers.ConvertTime(Generation.TimeElapsed) .. ".")
 			else
-				notification.AddLegacy("Failed to generate ground nodes using grid.", 1, 8)
+				pl:ChatPrint("[Nodegraph Editor+] Failed to generate ground nodes using grid.")
 			end
 		end)
 	end
