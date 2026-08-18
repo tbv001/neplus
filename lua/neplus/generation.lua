@@ -48,7 +48,9 @@ if CLIENT then
 	local TimeBudget = 0.006
 	local currentCoroutine = nil
 	local currentTool = nil
+	local taskStartTime = 0
 	Generation.IsGenerating = false
+	Generation.TimeElapsed = 0
 
 	local function CancelTaskInternal(notifyUser)
 		if not Generation.IsGenerating then
@@ -57,6 +59,7 @@ if CLIENT then
 
 		hook.Remove("Think", "NEPlusGenerationTask")
 		Generation.IsGenerating = false
+		Generation.TimeElapsed = SysTime() - taskStartTime
 		currentCoroutine = nil
 
 		if currentTool then
@@ -86,6 +89,8 @@ if CLIENT then
 		end
 
 		Generation.IsGenerating = true
+		Generation.TimeElapsed = 0
+		taskStartTime = SysTime()
 		currentTool = tool
 
 		local lastYieldTime = SysTime()
@@ -94,6 +99,8 @@ if CLIENT then
 				coroutine.yield("cancelled")
 				return
 			end
+
+			Generation.TimeElapsed = SysTime() - taskStartTime
 
 			if force or (SysTime() - lastYieldTime) >= TimeBudget then
 				lastYieldTime = SysTime()
@@ -120,11 +127,14 @@ if CLIENT then
 				return
 			end
 
+			Generation.TimeElapsed = SysTime() - taskStartTime
+
 			local tickStart = SysTime()
 			while (SysTime() - tickStart) < TimeBudget do
 				if coroutine.status(currentCoroutine) == "dead" then
 					hook.Remove("Think", "NEPlusGenerationTask")
 					Generation.IsGenerating = false
+					Generation.TimeElapsed = SysTime() - taskStartTime
 					currentCoroutine = nil
 
 					if onFinish then
@@ -147,6 +157,7 @@ if CLIENT then
 					ErrorNoHalt("[Nodegraph Editor+] Generation Coroutine Error: " .. tostring(yieldVal) .. "\n")
 					hook.Remove("Think", "NEPlusGenerationTask")
 					Generation.IsGenerating = false
+					Generation.TimeElapsed = SysTime() - taskStartTime
 					currentCoroutine = nil
 					if currentTool then
 						currentTool:BuildNodeGrid()
@@ -162,6 +173,7 @@ if CLIENT then
 				if yieldVal == "cancelled" then
 					hook.Remove("Think", "NEPlusGenerationTask")
 					Generation.IsGenerating = false
+					Generation.TimeElapsed = SysTime() - taskStartTime
 					currentCoroutine = nil
 					if currentTool then
 						currentTool:BuildNodeGrid()
@@ -236,9 +248,14 @@ if CLIENT then
 					tool:RemoveLink(id, destID)
 				end
 
-				if YieldCheck then YieldCheck() end
+				if YieldCheck then
+					YieldCheck()
+				end
 			end
-			if YieldCheck then YieldCheck() end
+
+			if YieldCheck then
+				YieldCheck()
+			end
 		end
 	end
 
@@ -415,6 +432,7 @@ if CLIENT then
 							end
 						end
 					end
+
 					YieldCheck()
 				end
 			end
@@ -441,6 +459,7 @@ if CLIENT then
 							end
 						end
 					end
+
 					YieldCheck()
 				end
 			end
@@ -486,8 +505,11 @@ if CLIENT then
 			tool:BuildZone()
 			tool:ClearEffects()
 
+			Generation.TimeElapsed = SysTime() - taskStartTime
 			if generatedCount > 0 then
-				notification.AddLegacy("Successfully generated " .. generatedCount .. " ground nodes.", 0, 8)
+				notification.AddLegacy(
+					"Successfully generated " .. generatedCount .. " ground nodes in " ..
+					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
 			else
 				notification.AddLegacy("Failed to generate ground nodes.", 1, 8)
 			end
@@ -657,8 +679,10 @@ if CLIENT then
 								tool:AddLink(airNodeID, otherID, 4)
 							end
 						end
+
 						YieldCheck()
 					end
+
 					YieldCheck()
 				end
 			end
@@ -674,8 +698,11 @@ if CLIENT then
 
 			local removedNodes = tool:RemoveUnlinkedNodes(Constants.NODE_TYPE_AIR)
 			count = count - (removedNodes or 0)
+			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy("Successfully generated " .. count .. " air nodes.", 0, 8)
+				notification.AddLegacy(
+					"Successfully generated " .. count .. " air nodes in " ..
+					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
 			else
 				notification.AddLegacy(
 					"Failed to generate air nodes. Either no ground nodes found, or no space for air nodes.", 1, 8)
@@ -781,8 +808,11 @@ if CLIENT then
 
 			tool:BuildZone()
 
+			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy("Successfully generated " .. count .. " jump links.", 0, 8)
+				notification.AddLegacy(
+					"Successfully generated " .. count .. " jump links in " ..
+					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
 			else
 				notification.AddLegacy("Failed to generate jump links.", 1, 8)
 			end
@@ -957,8 +987,11 @@ if CLIENT then
 			tool:BuildZone()
 			tool:ClearEffects()
 
+			Generation.TimeElapsed = SysTime() - taskStartTime
 			if count > 0 then
-				notification.AddLegacy("Generated " .. count .. " ground nodes from grid.", 0, 8)
+				notification.AddLegacy(
+					"Generated " .. count .. " ground nodes from grid in " ..
+					math.Round(Generation.TimeElapsed, 2) .. " seconds.", 0, 8)
 			else
 				notification.AddLegacy("Failed to generate ground nodes using grid.", 1, 8)
 			end

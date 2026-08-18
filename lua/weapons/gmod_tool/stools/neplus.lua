@@ -277,6 +277,10 @@ if CLIENT then
 		return Generation.IsGenerating or false
 	end
 
+	function TOOL:GenerationTimeElapsed()
+		return Generation.TimeElapsed
+	end
+
 	function TOOL:GetNodegraph()
 		return nodegraph
 	end
@@ -1809,7 +1813,13 @@ if CLIENT then
 		if self:IsGenerating() then
 			local yOffset = height * 0.5 - 30
 
+			-- Title
 			draw.SimpleText("Generating...", "NEPlusFont", width * 0.5, yOffset + 40, Color(255, 255, 255),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+			-- Time elapsed
+			local timeText = "Time elapsed: " .. math.Round(self:GenerationTimeElapsed()) .. "s"
+			draw.SimpleText(timeText, "NEPlusFont", width * 0.5, yOffset + 70, Color(200, 200, 200),
 				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
 			return
