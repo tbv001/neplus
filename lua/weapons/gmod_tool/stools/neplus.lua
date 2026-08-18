@@ -404,62 +404,48 @@ if CLIENT then
 		local nearbyNodes = nodeGrid:Query(pos, distMin, nodes)
 		local nodesToClean = {}
 		for otherNodeID, node in pairs(nearbyNodes) do
-			if otherNodeID ~= nodeID then
-				if self:IsNodeTypeVisible(node.type) then
-					if node.type == createType and createType ~= Constants.NODE_TYPE_CLIMB and createType ~= Constants.NODE_TYPE_HINT then
-						if node.type ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_AIR then
-							if self:IsLineClear(pos, node.pos) then
-								if cvNodeProjection:GetBool() then
-									local obstructed = false
-									local midPoint = pos + (node.pos - pos) * 0.5
-									local checkRadius = (pos - midPoint):Length() + nodeRadiusSqr
-									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
+			if otherNodeID == nodeID then
+				continue
+			end
 
-									for k, nodeB in pairs(obstructionCandidates) do
-										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-											if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
-												obstructed = true
-												break
-											end
-										end
-									end
+			if not self:IsNodeTypeVisible(node.type) then
+				continue
+			end
 
-									if not obstructed then
-										self:AddLink(nodeID, otherNodeID)
-										nodesToClean[#nodesToClean + 1] = otherNodeID
-									end
-								else
-									self:AddLink(nodeID, otherNodeID)
-								end
-							end
-						else
-							if self:IsLineClear(pos, node.pos, false, cvTraceHull:GetBool() and 2 or 0) then
-								if cvNodeProjection:GetBool() then
-									local obstructed = false
-									local midPoint = pos + (node.pos - pos) * 0.5
-									local checkRadius = (pos - midPoint):Length() + nodeRadiusSqr
-									local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
+			if node.type ~= createType or createType == Constants.NODE_TYPE_CLIMB or createType == Constants.NODE_TYPE_HINT then
+				continue
+			end
 
-									for k, nodeB in pairs(obstructionCandidates) do
-										if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
-											if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
-												obstructed = true
-												break
-											end
-										end
-									end
+			local isAirNode = (node.type == Constants.NODE_TYPE_AIR or createType == Constants.NODE_TYPE_AIR)
+			local traceType = isAirNode and (cvTraceHull:GetBool() and 2 or 0) or nil
+			local isClear = isAirNode and self:IsLineClear(pos, node.pos, false, traceType) or
+				self:IsLineClear(pos, node.pos)
 
-									if not obstructed then
-										self:AddLink(nodeID, otherNodeID)
-										nodesToClean[#nodesToClean + 1] = otherNodeID
-									end
-								else
-									self:AddLink(nodeID, otherNodeID)
-								end
-							end
+			if not isClear then
+				continue
+			end
+
+			if cvNodeProjection:GetBool() then
+				local obstructed = false
+				local midPoint = pos + (node.pos - pos) * 0.5
+				local checkRadius = (pos - midPoint):Length() + nodeRadiusSqr
+				local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
+
+				for k, nodeB in pairs(obstructionCandidates) do
+					if k ~= otherNodeID and k ~= nodeID and nodeB.type == createType then
+						if Math.IsNodeBetween(pos, nodeB.pos, node.pos, cvNodeRadius) then
+							obstructed = true
+							break
 						end
 					end
 				end
+
+				if not obstructed then
+					self:AddLink(nodeID, otherNodeID)
+					nodesToClean[#nodesToClean + 1] = otherNodeID
+				end
+			else
+				self:AddLink(nodeID, otherNodeID)
 			end
 		end
 
@@ -2038,81 +2024,66 @@ if CLIENT then
 			for nodeID, node in pairs(nodesToProcess) do
 				if not self:IsNodeTypeVisible(node.type) then
 					self:RemoveEffect(nodeID)
-				else
-					local hit, _, _ = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
-					local isHit = false
-					if hit then
-						local d = node.pos:DistToSqr(origin)
-						isHit = d <= distMaxSqr
-					end
+					continue
+				end
 
-					if isHit then
-						self.m_traceNode = nodeID
-					end
+				local hit = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
+				local isHit = hit and (node.pos:DistToSqr(origin) <= distMaxSqr)
+				if isHit then
+					self.m_traceNode = nodeID
+				end
 
-					if isHit and not self.m_bKeepSelection and self.m_tbEffects[nodeID] and self:IsNodeVisible(nodeID) then
-						nodesInRay[#nodesInRay + 1] = nodeID
-					else
-						self:CreateEffect(nodeID)
+				if isHit and not self.m_bKeepSelection and self.m_tbEffects[nodeID] and self:IsNodeVisible(nodeID) then
+					nodesInRay[#nodesInRay + 1] = nodeID
+					continue
+				end
 
-						if self:IsGenerating() then
-							continue
-						end
+				self:CreateEffect(nodeID)
 
-						if cvDrawPreview:GetBool() then
-							if node.pos:DistToSqr(origin) <= distMinLink then
-								if node.type == createType and createType ~= Constants.NODE_TYPE_CLIMB and createType ~= Constants.NODE_TYPE_HINT then
-									if node.type ~= Constants.NODE_TYPE_AIR and createType ~= Constants.NODE_TYPE_AIR then
-										if self:IsLineClear(origin, node.pos) then
-											if isNodeProjection then
-												local obstructed = false
-												local midPoint = origin + (node.pos - origin) * 0.5
-												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
-												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
-												for k, nodeB in pairs(obstructionCandidates) do
-													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
-															obstructed = true
-															break
-														end
-													end
-												end
+				if self:IsGenerating() then
+					continue
+				end
 
-												if not obstructed then
-													self.m_ePreview:AddLink(node)
-												end
-											else
-												self.m_ePreview:AddLink(node)
-											end
-										end
-									else
-										if self:IsLineClear(origin, node.pos, false, isTraceHull and 2 or 0) then
-											if isNodeProjection then
-												local obstructed = false
-												local midPoint = origin + (node.pos - origin) * 0.5
-												local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
-												local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
-												for k, nodeB in pairs(obstructionCandidates) do
-													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
-														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
-															obstructed = true
-															break
-														end
-													end
-												end
+				if not cvDrawPreview:GetBool() then
+					continue
+				end
 
-												if not obstructed then
-													self.m_ePreview:AddLink(node)
-												end
-											else
-												self.m_ePreview:AddLink(node)
-											end
-										end
-									end
-								end
+				if node.pos:DistToSqr(origin) > distMinLink then
+					continue
+				end
+
+				if node.type ~= createType or createType == Constants.NODE_TYPE_CLIMB or createType == Constants.NODE_TYPE_HINT then
+					continue
+				end
+
+				local isAirNode = (node.type == Constants.NODE_TYPE_AIR or createType == Constants.NODE_TYPE_AIR)
+				local traceType = isAirNode and (isTraceHull and 2 or 0) or nil
+				local isClear = isAirNode and self:IsLineClear(origin, node.pos, false, traceType) or
+					self:IsLineClear(origin, node.pos)
+
+				if not isClear then
+					continue
+				end
+
+				if isNodeProjection then
+					local obstructed = false
+					local midPoint = origin + (node.pos - origin) * 0.5
+					local checkRadius = (origin - midPoint):Length() + nodeRadiusSqr
+					local obstructionCandidates = nodeGrid:Query(midPoint, checkRadius, nodes)
+					for k, nodeB in pairs(obstructionCandidates) do
+						if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
+							if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
+								obstructed = true
+								break
 							end
 						end
 					end
+
+					if not obstructed then
+						self.m_ePreview:AddLink(node)
+					end
+				else
+					self.m_ePreview:AddLink(node)
 				end
 			end
 
