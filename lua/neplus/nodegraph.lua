@@ -504,28 +504,6 @@ function Nodegraph:Save(filePath)
 		end
 	end
 
-	for _, node in pairs(nodes) do
-		if node.link then
-			local toRemove = {}
-			for idx, link in pairs(node.link) do
-				local newSrc = nodeIDs[link.srcID]
-				local newDest = nodeIDs[link.destID]
-				if newSrc and newDest and nodes[newSrc] and nodes[newDest] then
-					link.srcID = newSrc
-					link.destID = newDest
-					link.src = nodes[newSrc]
-					link.dest = nodes[newDest]
-				else
-					toRemove[#toRemove + 1] = idx
-				end
-			end
-
-			for idx = 1, #toRemove do
-				node.link[toRemove[idx]] = nil
-			end
-		end
-	end
-
 	-- After putting everything in sequential order, we save hints for corresponding node IDs.
 	local saveHints = true
 	if file.Exists("data/nodegraph/" .. game.GetMap() .. ".hint.json", "GAME") then
@@ -705,28 +683,6 @@ function Nodegraph:SaveAsENT(filePath)
 		end
 	end
 
-	for _, node in pairs(nodes) do
-		if node.link then
-			local toRemove = {}
-			for idx, link in pairs(node.link) do
-				local newSrc = nodeIDs[link.srcID]
-				local newDest = nodeIDs[link.destID]
-				if newSrc and newDest and nodes[newSrc] and nodes[newDest] then
-					link.srcID = newSrc
-					link.destID = newDest
-					link.src = nodes[newSrc]
-					link.dest = nodes[newDest]
-				else
-					toRemove[#toRemove + 1] = idx
-				end
-			end
-
-			for idx = 1, #toRemove do
-				node.link[toRemove[idx]] = nil
-			end
-		end
-	end
-
 	for i = 1, #nodes do
 		local node = nodes[i]
 
@@ -761,7 +717,9 @@ function Nodegraph:SaveAsENT(filePath)
 			if node.type == Constants.NODE_TYPE_CLIMB then
 				local success = false
 
-				for _, link in pairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
+
 					if link.move and table.HasValue(link.move, 8) then
 						if nodes[link.destID] and nodes[link.destID].type ~= Constants.NODE_TYPE_CLIMB then
 							continue
@@ -779,7 +737,9 @@ function Nodegraph:SaveAsENT(filePath)
 			elseif node.type == Constants.NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
 
-				for _, link in pairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
+
 					if link.move and table.HasValue(link.move, 2) then
 						if nodes[link.destID] and nodes[link.destID].hint ~= 901 then
 							continue
@@ -945,28 +905,6 @@ function Nodegraph:SaveToVMF(filePath)
 		end
 	end
 
-	for _, node in pairs(nodes) do
-		if node.link then
-			local toRemove = {}
-			for idx, link in pairs(node.link) do
-				local newSrc = nodeIDs[link.srcID]
-				local newDest = nodeIDs[link.destID]
-				if newSrc and newDest and nodes[newSrc] and nodes[newDest] then
-					link.srcID = newSrc
-					link.destID = newDest
-					link.src = nodes[newSrc]
-					link.dest = nodes[newDest]
-				else
-					toRemove[#toRemove + 1] = idx
-				end
-			end
-
-			for idx = 1, #toRemove do
-				node.link[toRemove[idx]] = nil
-			end
-		end
-	end
-
 	fileHandle:Write(vmfContent)
 
 	for i = 1, #nodes do
@@ -1001,7 +939,8 @@ function Nodegraph:SaveToVMF(filePath)
 
 			if node.type == Constants.NODE_TYPE_CLIMB then
 				local success = false
-				for _, link in pairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 8) then
 						if nodes[link.destID] and nodes[link.destID].type ~= Constants.NODE_TYPE_CLIMB then
 							continue
@@ -1018,7 +957,8 @@ function Nodegraph:SaveToVMF(filePath)
 				end
 			elseif node.type == Constants.NODE_TYPE_GROUND and node.hint == 901 then
 				local success = false
-				for _, link in pairs(node.link) do
+				for j = 1, #node.link do
+					local link = node.link[j]
 					if link.move and table.HasValue(link.move, 2) then
 						if nodes[link.destID] and nodes[link.destID].hint ~= 901 then
 							continue
