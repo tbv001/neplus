@@ -5,4 +5,5 @@ if SERVER then
     AddCSLuaFile("neplus/math.lua")
     AddCSLuaFile("neplus/nodegraph.lua")
     AddCSLuaFile("neplus/spatial.lua")
+    AddCSLuaFile("neplus/generation.lua")
 end

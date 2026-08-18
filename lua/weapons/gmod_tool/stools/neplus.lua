@@ -3,6 +3,7 @@ local Grid = include("neplus/spatial.lua")
 local Constants = include("neplus/constants.lua")
 local Math = include("neplus/math.lua")
 local Helpers = include("neplus/helpers.lua")
+local Generation = include("neplus/generation.lua")
 
 --/////////////////////////////////////////////
 -- CLIENT-SIDE CODE
@@ -36,14 +37,10 @@ if CLIENT then
 	local cvH = CreateClientConVar("cl_nodegraph_tool_node_z", "16", true)
 	local cvAirNodeHeightOffset = CreateClientConVar("cl_nodegraph_tool_node_air_z", "64", false)
 	local cvAirNodeHeightOffsetEnable = CreateClientConVar("cl_nodegraph_tool_node_air_z_enable", "0", true)
-	local cvHGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_node_z", "16", false)
 	local cvDZ = CreateClientConVar("cl_nodegraph_tool_node_dz", "18", false)
 	local cvDX = CreateClientConVar("cl_nodegraph_tool_node_dx", "20", false)
 	local cvHint = CreateClientConVar("cl_nodegraph_tool_node_hint", "0", false)
 	local cvDistLink = CreateClientConVar("cl_nodegraph_tool_max_link_distance", "720", true)
-	local cvDistLinkGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_link_distance", "720", false)
-	local cvDistLinkAirNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_air_link_distance", "720", false)
-	local cvDistLinkJmpLinkGen = CreateClientConVar("cl_nodegraph_tool_gen_jump_link_distance", "720", false)
 	local cvDrawGround = CreateClientConVar("cl_nodegraph_tool_nodes_draw_ground", "1", true)
 	local cvDrawAir = CreateClientConVar("cl_nodegraph_tool_nodes_draw_air", "1", true)
 	local cvDrawClimb = CreateClientConVar("cl_nodegraph_tool_nodes_draw_climb", "1", true)
@@ -57,10 +54,7 @@ if CLIENT then
 	local cvShowYaw = CreateClientConVar("cl_nodegraph_tool_nodes_show_yaw", "1", true)
 	local cvAutoYaw = CreateClientConVar("cl_nodegraph_tool_yaw_auto", "1", true)
 	local cvStepCheck = CreateClientConVar("cl_nodegraph_tool_stepcheck_enable", "1", true)
-	local cvStepCheckGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_stepcheck_enable", "1", false)
 	local cvNodeProjection = CreateClientConVar("cl_nodegraph_tool_nodeproj_enable", "1", true)
-	local cvNodeProjGrndNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_ground_nodeproj_enable", "1", false)
-	local cvNodeProjAirNodeGen = CreateClientConVar("cl_nodegraph_tool_gen_air_nodeproj_enable", "1", false)
 	local cvJumpLink = CreateClientConVar("cl_nodegraph_tool_jump_link", "0", false)
 	local cvNodeRadius = 900 -- 30 squared
 	local nodeRadiusSqr = 30
@@ -75,30 +69,7 @@ if CLIENT then
 	local cvShowFlyLinks = CreateClientConVar("cl_nodegraph_tool_show_fly_links", "1", true)
 	local cvShowClimbLinks = CreateClientConVar("cl_nodegraph_tool_show_climb_links", "1", true)
 	local cvDontSelDiffNode = CreateClientConVar("cl_nodegraph_tool_dont_select_diff_node_type", "1", true)
-	local cvMinJumpHeight = CreateClientConVar("cl_nodegraph_tool_gen_jump_min_height", "72", false)
-	local cvJumpGenTraceHull = CreateClientConVar("cl_nodegraph_tool_gen_jump_tracehull", "1", false)
-	local cvAirGenTraceHull = CreateClientConVar("cl_nodegraph_tool_gen_air_link_tracehull", "1", false)
-	local cvGrndGenTraceHull = CreateClientConVar("cl_nodegraph_tool_gen_ground_link_tracehull", "0", false)
-	local cvAirGenStriderNode = CreateClientConVar("cl_nodegraph_tool_gen_air_strider_node", "0", false)
-	local cvAirGenHeight = CreateClientConVar("cl_nodegraph_tool_gen_air_height", "64", false)
-	local cvAirGenGrndLinks = CreateClientConVar("cl_nodegraph_tool_gen_air_ground_links", "1", false)
 	local cvPlainLinks = CreateClientConVar("cl_nodegraph_tool_plain_links", "1", true)
-	local cvGrndGenNavAreaSize = CreateClientConVar("cl_nodegraph_tool_gen_ground_navareasize", "3000", false)
-	local cvGrndGenWater = CreateClientConVar("cl_nodegraph_tool_gen_ground_allow_water", "0", false)
-	local cvGrndGenCrouch = CreateClientConVar("cl_nodegraph_tool_gen_ground_allow_crouch", "0", false)
-	local cvGrndGenJump = CreateClientConVar("cl_nodegraph_tool_gen_ground_allow_jump", "0", false)
-	local cvGrndGenJumpLinks = CreateClientConVar("cl_nodegraph_tool_gen_ground_jump_links", "1", false)
-	local cvGrndGenNavLinks = CreateClientConVar("cl_nodegraph_tool_gen_ground_navlinks", "1", false)
-	local cvGrndGenHintJumps = CreateClientConVar("cl_nodegraph_tool_gen_ground_jump_hints", "0", false)
-	local cvJumpGenHintJumps = CreateClientConVar("cl_nodegraph_tool_gen_jump_hints", "0", false)
-	local cvGrndGenKLZ = CreateClientConVar("cl_nodegraph_tool_gen_ground_onlykeeplargestzone", "0", false)
-	local cvAirGenKLZ = CreateClientConVar("cl_nodegraph_tool_gen_air_onlykeeplargestzone", "0", false)
-	local cvGrndGenGridStep = CreateClientConVar("cl_nodegraph_tool_gen_grid_step", "256", false)
-	local cvGrndGenGridRangeEnabled = CreateClientConVar("cl_nodegraph_tool_gen_grid_range_enabled", "0", false)
-	local cvGrndGenGridRange = CreateClientConVar("cl_nodegraph_tool_gen_grid_range", "2048", false)
-	local cvGrndGenGridRemNodes = CreateClientConVar("cl_nodegraph_tool_gen_grid_removenodes", "1", false)
-	local cvGrndGenGridWater = CreateClientConVar("cl_nodegraph_tool_gen_grid_allowwater", "0", false)
-	local cvGrndGenGridOffset = CreateClientConVar("cl_nodegraph_tool_gen_grid_height_offset", "16", false)
 
 	-- Zone related utilities
 	local cvSelectedZones = CreateClientConVar("cl_nodegraph_tool_selectedzones", "", false)
@@ -287,6 +258,22 @@ if CLIENT then
 			end
 		end)
 	end)
+
+	function TOOL:GetNodegraph()
+		return nodegraph
+	end
+
+	function TOOL:GetNodes()
+		return nodes
+	end
+
+	function TOOL:GetNodeGrid()
+		return nodeGrid
+	end
+
+	function TOOL:GetTraceMask()
+		return TraceMask
+	end
 
 	function TOOL:BuildNodeGrid()
 		if not nodeGrid then
@@ -569,7 +556,7 @@ if CLIENT then
 			nodeType = Constants.NODE_TYPE_GROUND
 		end
 
-		local heightOffset = cvHGrndNodeGen:GetInt()
+		local heightOffset = Generation.cvHGrndNodeGen:GetInt()
 		local nodePos = pos
 		if nodeType == Constants.NODE_TYPE_GROUND then
 			nodePos[3] = nodePos[3] + heightOffset
@@ -606,172 +593,6 @@ if CLIENT then
 
 		return count
 	end
-
-	local expectedChunks
-	local receivedChunks = {}
-	net.Receive("nodegraph_gen_client", function()
-		local totalChunks = net.ReadUInt(16)
-		local chunkIndex = net.ReadUInt(16)
-		local chunkSize = net.ReadUInt(32)
-		local chunkData = net.ReadData(chunkSize)
-		if chunkIndex == 1 then
-			expectedChunks = totalChunks
-			receivedChunks = {}
-		end
-
-		receivedChunks[chunkIndex] = chunkData
-
-		local allChunksReceived = true
-		for i = 1, expectedChunks do
-			if not receivedChunks[i] then
-				allChunksReceived = false
-				break
-			end
-		end
-
-		if allChunksReceived then
-			local combinedData = ""
-			for i = 1, expectedChunks do
-				combinedData = combinedData .. receivedChunks[i]
-			end
-
-			local json = util.Decompress(combinedData)
-			if not json then
-				return
-			end
-
-			receivedChunks = {}
-
-			local tool = GetTool()
-			local numNodes
-			if not tool then
-				return
-			end
-
-			local posTable = util.JSONToTable(json)
-			if not posTable or #posTable <= 0 then
-				notification.AddLegacy("No Navmesh found. Please generate one first before using.", 0, 8)
-				return
-			end
-
-			for id, node in pairs(nodes) do
-				if node.type == Constants.NODE_TYPE_GROUND then
-					nodegraph:RemoveNode(id)
-				end
-			end
-
-			local generatedCount = 0
-			local areaIDToNodeID = {}
-			local nodeList = {}
-			local nodesToClean = {}
-			for i = 1, #posTable do
-				local areaData = posTable[i]
-
-				numNodes = nodegraph:CountNodes(nodes)
-				if numNodes >= Constants.MAX_NODES then
-					break
-				end
-
-				local nodeID = tool:CreateNodeGen(areaData.pos)
-				if nodeID then
-					areaIDToNodeID[areaData.id] = nodeID
-					nodeList[#nodeList + 1] = { nodeID = nodeID, pos = areaData.pos }
-					nodesToClean[#nodesToClean + 1] = nodeID
-					generatedCount = generatedCount + 1
-				else
-					print("Failed to create node for area ID:", areaData.id)
-				end
-			end
-
-			tool:BuildNodeGrid()
-
-			if cvGrndGenNavLinks:GetBool() then
-				for i = 1, #posTable do
-					local areaData = posTable[i]
-					local srcNodeID = areaIDToNodeID[areaData.id]
-					if srcNodeID then
-						for j = 1, #areaData.adjacents do
-							local adjAreaID = areaData.adjacents[j]
-							local destNodeID = areaIDToNodeID[adjAreaID]
-
-							if destNodeID then
-								tool:AddLink(srcNodeID, destNodeID)
-							end
-						end
-					end
-				end
-			end
-
-			if cvGrndGenJumpLinks:GetBool() then
-				for i = 1, #posTable do
-					local areaData = posTable[i]
-					local srcNodeID = areaIDToNodeID[areaData.id]
-					if srcNodeID then
-						for j = 1, #areaData.jumps do
-							local adjAreaID = areaData.jumps[j]
-							local destNodeID = areaIDToNodeID[adjAreaID]
-
-							if destNodeID then
-								tool:AddLink(srcNodeID, destNodeID, 2)
-
-								if cvGrndGenHintJumps:GetBool() then
-									local srcNode = nodes[srcNodeID]
-									local destNode = nodes[destNodeID]
-									if srcNode and destNode then
-										srcNode.hint = 901
-										destNode.hint = 901
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-
-			if cvDistLinkGrndNodeGen:GetInt() > 0 then
-				local distMin = math.min(cvDist:GetInt(), cvDistLinkGrndNodeGen:GetInt())
-				for i = 1, #nodeList do
-					local nodeA = nodeList[i]
-					local neighborCandidates = nodeGrid:Query(nodeA.pos, distMin, nodes)
-					for otherID, otherNode in pairs(neighborCandidates) do
-						if otherID ~= nodeA.nodeID and otherNode.type == Constants.NODE_TYPE_GROUND then
-							if not tool:HasLink(nodeA.nodeID, otherID) then
-								if tool:IsLineClear(nodeA.pos, otherNode.pos, cvStepCheckGrndNodeGen:GetBool(), cvGrndGenTraceHull:GetInt()) then
-									tool:AddLink(nodeA.nodeID, otherID)
-								end
-							end
-						end
-					end
-				end
-			end
-
-			if not table.IsEmpty(nodesToClean) and cvNodeProjGrndNodeGen:GetBool() then
-				tool:CleanNodegraphLinks(nodesToClean)
-			end
-
-			if cvPlaceNodeOnGround:GetBool() then
-				tool:PlaceAllNodesToGround()
-			end
-
-			if cvGrndGenKLZ:GetBool() then
-				local klzCount = tool:OnlyKeepLargestZone(true, false)
-				generatedCount = generatedCount - klzCount
-			end
-
-			local removedUnlinked = tool:RemoveUnlinkedNodes(Constants.NODE_TYPE_GROUND)
-			generatedCount = generatedCount - removedUnlinked
-
-			tool:BuildNodeGrid()
-			tool:BuildZone()
-			tool:ClearEffects()
-
-			if generatedCount > 0 then
-				notification.AddLegacy("Successfully generated " .. generatedCount .. " Ground Nodes.", 0, 8)
-			else
-				notification.AddLegacy("Failed to generate Ground Nodes.", 0, 8)
-			end
-		end
-	end)
 
 	net.Receive("nodegraph_cleareffects_client", function(length)
 		for _, v in ents.Iterator() do
@@ -822,427 +643,19 @@ if CLIENT then
 	end
 
 	function TOOL:GenerateNodes()
-		local conVars = {
-			NavAreaSize = cvGrndGenNavAreaSize:GetInt(),
-			WaterAreas = cvGrndGenWater:GetBool(),
-			CrouchAreas = cvGrndGenCrouch:GetBool(),
-			JumpAreas = cvGrndGenJump:GetBool(),
-			GenJumpLinks = cvGrndGenJumpLinks:GetBool()
-		}
-
-		net.Start("nodegraph_gen_server")
-		net.WriteEntity(self:GetOwner())
-		net.WriteTable(conVars)
-		net.SendToServer()
+		Generation.GenerateGroundNodes(self)
 	end
 
 	function TOOL:GenerateAirNodes()
-		local groundData = {}
-		local nodesToClean = {}
-		local count = 0
-		local distMin = math.min(cvDist:GetInt(), cvDistLinkAirNodeGen:GetInt())
-		local pl = self:GetOwner()
-		for id, node in pairs(nodes) do
-			if node.type == Constants.NODE_TYPE_AIR then
-				nodegraph:RemoveNode(id)
-			end
-
-			if node.type == Constants.NODE_TYPE_GROUND then
-				local validPos
-				local startPos = node.pos
-				local attempts = 0
-				while attempts < 16 do
-					local trace = util.TraceHull({
-						start = startPos,
-						endpos = startPos,
-						mins = Vector(-16, -16, 0),
-						maxs = Vector(16, 16, 8),
-						mask = TraceMask,
-						filter = pl
-					})
-
-					if not trace.StartSolid then
-						break
-					end
-
-					startPos = startPos + Vector(0, 0, 1)
-					attempts = attempts + 1
-				end
-
-				local finalTrace = util.TraceHull({
-					start = startPos,
-					endpos = startPos,
-					mins = Vector(-16, -16, 0),
-					maxs = Vector(16, 16, 8),
-					mask = TraceMask,
-					filter = pl
-				})
-
-				if finalTrace.StartSolid then
-					continue
-				end
-
-				local endPos = startPos - Vector(0, 0, 10000)
-				local trace = util.TraceHull({
-					start = startPos,
-					endpos = endPos,
-					mins = Vector(-16, -16, 0),
-					maxs = Vector(16, 16, 8),
-					mask = TraceMask,
-					filter = pl
-				})
-
-				if trace.Hit then
-					validPos = trace.HitPos
-				else
-					validPos = node.pos
-				end
-
-				groundData[#groundData + 1] = { pos = validPos, parentID = id, links = node.link }
-			end
-		end
-
-		local parentToAir = {}
-		for i = 1, #groundData do
-			local data = groundData[i]
-			local startPos = data.pos
-			local endPos = startPos + Vector(0, 0, cvAirGenHeight:GetInt())
-			local firstTrace = util.TraceLine({
-				start = startPos,
-				endpos = endPos + Vector(0, 0, 64), -- They must have at least 64 units of empty space above them to be valid.
-				mask = TraceMask,
-				filter = pl
-			})
-
-			if firstTrace.Hit then
-				continue
-			end
-
-			local validPos = endPos
-			if validPos then
-				local numNodes = nodegraph:CountNodes(nodes)
-				if numNodes >= Constants.MAX_NODES then
-					notification.AddLegacy("Reached the maximum node limit. Can't generate more Air Nodes.", 0, 8)
-					break
-				end
-
-				local airNode = self:CreateNodeGen(validPos, Constants.NODE_TYPE_AIR,
-					cvAirGenStriderNode:GetBool() and 904 or 0)
-
-				if airNode then
-					nodes[airNode].parentGround = data.parentID
-					parentToAir[data.parentID] = airNode
-					nodesToClean[#nodesToClean + 1] = airNode
-					count = count + 1
-				end
-			end
-		end
-
-		if cvAirGenGrndLinks:GetBool() then
-			for i = 1, #groundData do
-				local data = groundData[i]
-				local parentID = data.parentID
-				local airNodeID = parentToAir[parentID]
-				if airNodeID then
-					for _, link in pairs(data.links) do
-						if link.move and not table.HasValue(link.move, 1) then
-							continue
-						end
-
-						local otherGround = nil
-						if link.src and link.src ~= nodes[parentID] then
-							otherGround = link.src
-						elseif link.dest and link.dest ~= nodes[parentID] then
-							otherGround = link.dest
-						end
-
-						if otherGround then
-							local otherID = nil
-							for id, n in pairs(nodes) do
-								if n == otherGround then
-									otherID = id
-									break
-								end
-							end
-
-							if otherID and parentToAir[otherID] then
-								self:AddLink(airNodeID, parentToAir[otherID], 4)
-							end
-						end
-					end
-				end
-			end
-		end
-
-		if cvDistLinkAirNodeGen:GetInt() > 0 then
-			self:BuildNodeGrid()
-
-			for _, airNodeID in pairs(parentToAir) do
-				local validPos = nodes[airNodeID].pos
-				local neighborCandidates = nodeGrid:Query(validPos, distMin, nodes)
-				for otherID, otherNode in pairs(neighborCandidates) do
-					if otherID ~= airNodeID and otherNode.type == Constants.NODE_TYPE_AIR then
-						if self:IsLineClear(validPos, otherNode.pos, false, cvAirGenTraceHull:GetBool() and 2 or 0) then
-							self:AddLink(airNodeID, otherID, 4)
-						end
-					end
-				end
-			end
-		end
-
-		if not table.IsEmpty(nodesToClean) and cvNodeProjAirNodeGen:GetBool() then
-			self:CleanNodegraphLinks(nodesToClean)
-		end
-
-		if cvAirGenKLZ:GetBool() then
-			local klzCount = self:OnlyKeepLargestZone(false, true)
-			count = count - klzCount
-		end
-
-		local removedNodes = self:RemoveUnlinkedNodes(Constants.NODE_TYPE_AIR)
-		count = count - removedNodes
-		if count > 0 then
-			notification.AddLegacy("Successfully generated " .. count .. " Air Nodes.", 0, 8)
-		else
-			notification.AddLegacy(
-				"Failed to generate Air Nodes. Either no Ground Nodes found, or no space for Air Nodes.", 1, 8)
-		end
-
-		self:BuildNodeGrid()
-		self:BuildZone()
+		Generation.GenerateAirNodes(self)
 	end
 
 	function TOOL:GenerateJumpLinks()
-		local distMinLinear = math.min(cvDist:GetInt(), cvDistLinkJmpLinkGen:GetInt())
-		local distMin = distMinLinear * distMinLinear
-		local pl = self:GetOwner()
-
-		self:RemoveLinksWithType(2)
-		self:BuildNodeGrid()
-
-		for nodeIDA, nodeA in pairs(nodes) do
-			if nodeA.type ~= Constants.NODE_TYPE_GROUND then
-				continue
-			end
-
-			local neighborCandidates = nodeGrid:Query(nodeA.pos, distMinLinear, nodes)
-			for nodeIDB, nodeB in pairs(neighborCandidates) do
-				if nodeIDB ~= nodeIDA and nodeB and nodeB.type == Constants.NODE_TYPE_GROUND then
-					local d = nodeA.pos:DistToSqr(nodeB.pos)
-
-					if d <= distMin then
-						local deltaZ = nodeB.pos[3] - nodeA.pos[3]
-						if not self:HasLink(nodeIDA, nodeIDB) and deltaZ < -cvMinJumpHeight:GetInt() then
-							local traceStart = nodeA.pos + Vector(0, 0, 3)
-							local traceEnd = Vector(nodeB.pos.x, nodeB.pos.y, nodeA.pos.z)
-							local traceResult
-							local trace
-							if cvJumpGenTraceHull:GetBool() then
-								trace = {
-									start = traceStart,
-									endpos = traceEnd,
-									mins = Vector(-13, -13, 0),
-									maxs = Vector(13, 13, 69),
-									mask = TraceMask,
-									filter = pl
-								}
-
-								traceResult = util.TraceHull(trace)
-							else
-								trace = {
-									start = traceStart,
-									endpos = traceEnd,
-									mask = TraceMask,
-									filter = pl
-								}
-
-								traceResult = util.TraceLine(trace)
-							end
-
-							if not traceResult.Hit then
-								trace.start = Vector(nodeB.pos.x, nodeB.pos.y, nodeA.pos.z)
-								trace.endpos = nodeB.pos + Vector(0, 0, 3)
-
-								local finalTraceResult
-
-								if cvJumpGenTraceHull:GetBool() then
-									finalTraceResult = util.TraceHull(trace)
-								else
-									finalTraceResult = util.TraceLine(trace)
-								end
-
-								if not finalTraceResult.Hit then
-									self:AddLink(nodeIDA, nodeIDB, 2)
-
-									if cvJumpGenHintJumps:GetBool() then
-										local srcNode = nodes[nodeIDA]
-										local destNode = nodes[nodeIDB]
-
-										if srcNode and destNode then
-											srcNode.hint = 901
-											destNode.hint = 901
-										end
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-
-		self:BuildZone()
+		Generation.GenerateJumpLinks(self)
 	end
 
 	function TOOL:GenerateGridNodes(startPos)
-		local step = cvGrndGenGridStep:GetInt()
-		local range = cvGrndGenGridRange:GetInt()
-		local useRange = cvGrndGenGridRangeEnabled:GetBool()
-		local allowWater = cvGrndGenGridWater:GetBool()
-		local hOffset = cvGrndGenGridOffset:GetInt()
-		local count = 0
-		local pl = self:GetOwner()
-		local createdNodes = {}
-
-		startPos.x = math.Round(startPos.x / step) * step
-		startPos.y = math.Round(startPos.y / step) * step
-		startPos.z = math.Round(startPos.z / step) * step
-
-		local minX, maxX, minY, maxY, minZ, maxZ
-		if useRange then
-			minX, maxX = startPos.x - range, startPos.x + range
-			minY, maxY = startPos.y - range, startPos.y + range
-			minZ, maxZ = startPos.z - range, startPos.z + range
-		else
-			local mins, maxs = game.GetWorld():GetModelBounds()
-			minX = startPos.x - math.ceil((startPos.x - mins.x) / step) * step
-			minY = startPos.y - math.ceil((startPos.y - mins.y) / step) * step
-			minZ = startPos.z - math.ceil((startPos.z - mins.z) / step) * step
-			maxX, maxY, maxZ = maxs.x, maxs.y, maxs.z
-		end
-
-		if cvGrndGenGridRemNodes:GetBool() then
-			for id, node in pairs(nodes) do
-				if node.type == Constants.NODE_TYPE_GROUND then
-					nodegraph:RemoveNode(id)
-				end
-			end
-		end
-
-		local candidates = {}
-		local rangeSqr = range * range
-		for x = minX, maxX, step do
-			for y = minY, maxY, step do
-				local dx = x - startPos.x
-				local dy = y - startPos.y
-				if useRange and (dx * dx + dy * dy) > rangeSqr then
-					continue
-				end
-
-				for z = minZ, maxZ, step do
-					candidates[#candidates + 1] = Vector(x, y, z)
-				end
-			end
-		end
-
-		table.sort(candidates, function(a, b)
-			return a:DistToSqr(startPos) < b:DistToSqr(startPos)
-		end)
-
-		for _ = 1, #candidates do
-			if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
-				notification.AddLegacy("Reached node limit. Stopped generation.", 1, 8)
-				break
-			end
-
-			local pos = candidates[_]
-			local aboveOffset = Vector(0, 0, 0)
-			local aboveCheckTr = util.TraceLine({
-				start = pos,
-				endpos = pos + Vector(0, 0, 128),
-				mask = TraceMask,
-				filter = pl
-			})
-
-			if aboveCheckTr.Hit then
-				aboveOffset.z = aboveCheckTr.HitPos.z - pos.z
-			else
-				aboveOffset.z = 128
-			end
-
-			local placeCheckTr = util.TraceLine({
-				start = pos + aboveOffset,
-				endpos = pos - Vector(0, 0, step * 1.5 + 128),
-				mask = TraceMask,
-				filter = pl
-			})
-
-			if placeCheckTr.Hit and not placeCheckTr.StartSolid and placeCheckTr.HitNormal.z >= 0.70710678 then
-				if not allowWater then
-					local contents = util.PointContents(placeCheckTr.HitPos)
-					if bit.band(contents, CONTENTS_WATER) ~= 0 then
-						continue
-					end
-				end
-
-				local solidCheckTr = util.TraceHull({
-					start = placeCheckTr.HitPos + Vector(0, 0, 10),
-					endpos = placeCheckTr.HitPos + Vector(0, 0, 10),
-					mins = Vector(-13, -13, 0),
-					maxs = Vector(13, 13, 62),
-					mask = TraceMask,
-					filter = pl
-				})
-
-				if solidCheckTr.StartSolid then
-					continue
-				end
-
-				local nearby = nodeGrid:Query(placeCheckTr.HitPos, 50, nodes)
-				if table.Count(nearby) == 0 then
-					local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset),
-						Constants.NODE_TYPE_GROUND, 0, 0, 0)
-					if nodeGenerated then
-						nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
-						createdNodes[#createdNodes + 1] = nodeGenerated
-						count = count + 1
-					end
-				end
-			end
-
-			candidates[_] = nil
-		end
-
-		if count > 0 then
-			self:BuildNodeGrid()
-
-			for i = 1, #createdNodes do
-				local nodeID = createdNodes[i]
-				local node = nodes[nodeID]
-				if not node then
-					continue
-				end
-
-				local nearby = nodeGrid:Query(node.pos, step * 1.5, nodes)
-				for otherID, otherNode in pairs(nearby) do
-					if otherID ~= nodeID and otherNode.type == Constants.NODE_TYPE_GROUND then
-						if not self:HasLink(nodeID, otherID) then
-							if self:IsLineClear(node.pos, otherNode.pos, true, 0) then
-								self:AddLink(nodeID, otherID)
-							end
-						end
-					end
-				end
-			end
-		end
-
-		createdNodes = nil
-		candidates = nil
-
-		self:BuildNodeGrid()
-		self:BuildZone()
-		self:ClearEffects()
-		notification.AddLegacy("Generated " .. count .. " ground nodes from grid.", 0, 8)
+		Generation.GenerateGridNodes(self, startPos)
 	end
 
 	function TOOL:CleanNodegraphLinks(targetNodes)
@@ -3634,206 +3047,6 @@ if SERVER then
 	hook.Add("PlayerDeath", "NEPlusPlayerDeath", function(ply)
 		net.Start("nodegraph_cleareffects_client")
 		net.Send(ply)
-	end)
-
-	local function GetAllNavAreas(genSettings)
-		local eligibleNavAreas = {}
-		local eligibleNavAreaIds = {}
-		local minimalAreaSize = genSettings.NavAreaSize
-		local crouchEnabled = genSettings.CrouchAreas
-		local jumpEnabled = genSettings.JumpAreas
-		local waterEnabled = genSettings.WaterAreas
-		local jumpLinksEnabled = genSettings.GenJumpLinks
-		local function IsAreaEligible(navArea)
-			if navArea:HasAttributes(NAV_MESH_INVALID) or navArea:IsBlocked() then
-				return false
-			end
-
-			if not crouchEnabled then
-				if navArea:HasAttributes(NAV_MESH_CROUCH) then
-					return false
-				end
-			end
-
-			if not jumpEnabled then
-				if navArea:HasAttributes(NAV_MESH_JUMP) then
-					return false
-				end
-			end
-
-			if not waterEnabled and navArea:IsUnderwater() then
-				return false
-			end
-
-			local areaSize = navArea:GetSizeX() * navArea:GetSizeY()
-			if areaSize < minimalAreaSize then
-				return false
-			end
-
-			return true
-		end
-
-		local allNavAreas = navmesh.GetAllNavAreas()
-		for i = 1, #allNavAreas do
-			local navArea = allNavAreas[i]
-			if IsAreaEligible(navArea) then
-				local areaData = {
-					id = navArea:GetID(),
-					pos = navArea:GetCenter(),
-					adjacents = {},
-					jumps = {}
-				}
-
-				eligibleNavAreas[#eligibleNavAreas + 1] = areaData
-				eligibleNavAreaIds[navArea:GetID()] = true
-			end
-		end
-
-		for i = 1, #eligibleNavAreas do
-			local areaData = eligibleNavAreas[i]
-			local navArea = navmesh.GetNavAreaByID(areaData.id)
-			if not navArea then continue end
-
-			local adjacentAreas = navArea:GetAdjacentAreas()
-			for j = 1, #adjacentAreas do
-				local adjacentArea = adjacentAreas[j]
-				local adjacentId = adjacentArea:GetID()
-
-				if eligibleNavAreaIds[adjacentId] then
-					local heightChange = math.abs(navArea:ComputeAdjacentConnectionHeightChange(adjacentArea))
-
-					if heightChange <= 18 then
-						areaData.adjacents[#areaData.adjacents + 1] = adjacentId
-					else
-						if jumpLinksEnabled then
-							areaData.jumps[#areaData.jumps + 1] = adjacentId
-						end
-					end
-				end
-			end
-		end
-
-		local finalAreas = {}
-		local usedAreaIds = {}
-		local remainingAreas = {}
-		for i = 1, #eligibleNavAreas do
-			local areaData = eligibleNavAreas[i]
-			if #areaData.adjacents > 0 or (jumpLinksEnabled and #areaData.jumps > 0) then
-				if #finalAreas < Constants.MAX_NODES then
-					finalAreas[#finalAreas + 1] = areaData
-					usedAreaIds[areaData.id] = true
-				else
-					remainingAreas[#remainingAreas + 1] = areaData
-				end
-			end
-		end
-
-		local finalAreasChanged = true
-		while finalAreasChanged and #remainingAreas > 0 do
-			finalAreasChanged = false
-
-			for i = #finalAreas, 1, -1 do
-				local areaData = finalAreas[i]
-				local connectedAdjacents = 0
-				local connectedJumps = 0
-
-				for j = 1, #areaData.adjacents do
-					local adjId = areaData.adjacents[j]
-					if usedAreaIds[adjId] then
-						connectedAdjacents = connectedAdjacents + 1
-					end
-				end
-
-				if jumpLinksEnabled then
-					for j = 1, #areaData.jumps do
-						local jumpId = areaData.jumps[j]
-						if usedAreaIds[jumpId] then
-							connectedJumps = connectedJumps + 1
-						end
-					end
-				end
-
-				if connectedAdjacents == 0 and (not jumpLinksEnabled or connectedJumps == 0) then
-					for j = 1, #remainingAreas do
-						local remainingArea = remainingAreas[j]
-						local replacementConnectedAdjacents = 0
-						local replacementConnectedJumps = 0
-
-						for k = 1, #remainingArea.adjacents do
-							local adjId = remainingArea.adjacents[k]
-							if usedAreaIds[adjId] then
-								replacementConnectedAdjacents = replacementConnectedAdjacents + 1
-							end
-						end
-
-						if jumpLinksEnabled then
-							for k = 1, #remainingArea.jumps do
-								local jumpId = remainingArea.jumps[k]
-								if usedAreaIds[jumpId] then
-									replacementConnectedJumps = replacementConnectedJumps + 1
-								end
-							end
-						end
-
-						if replacementConnectedAdjacents > 0 or (jumpLinksEnabled and replacementConnectedJumps > 0) then
-							usedAreaIds[areaData.id] = nil
-							table.remove(finalAreas, i)
-
-							finalAreas[#finalAreas + 1] = remainingArea
-							usedAreaIds[remainingArea.id] = true
-
-							table.remove(remainingAreas, j)
-
-							finalAreasChanged = true
-							break
-						end
-					end
-
-					if not finalAreasChanged then
-						usedAreaIds[areaData.id] = nil
-						table.remove(finalAreas, i)
-						finalAreasChanged = true
-					end
-				end
-			end
-		end
-
-		return finalAreas
-	end
-
-	local chunkSize = 60000
-	net.Receive("nodegraph_gen_server", function()
-		local plyEntity = net.ReadEntity()
-		if not IsValid(plyEntity) then
-			return
-		end
-
-		local genSettings = net.ReadTable()
-		if not genSettings then
-			return
-		end
-
-		local posTable = GetAllNavAreas(genSettings) or {}
-		local json = util.TableToJSON(posTable)
-		local compressed = util.Compress(json)
-		local totalChunks = math.ceil(#compressed / chunkSize)
-		for i = 1, totalChunks do
-			local startPos = (i - 1) * chunkSize + 1
-			local endPos = math.min(i * chunkSize, #compressed)
-			local chunkData = string.sub(compressed, startPos, endPos)
-			timer.Simple(i * 0.1, function()
-				if not IsValid(plyEntity) then
-					return
-				end
-
-				net.Start("nodegraph_gen_client")
-				net.WriteUInt(totalChunks, 16)
-				net.WriteUInt(i, 16)
-				net.WriteUInt(#chunkData, 32)
-				net.WriteData(chunkData, #chunkData)
-				net.Send(plyEntity)
-			end)
-		end
 	end)
 
 	net.Receive("nodegraph_get_hint_server", function()
