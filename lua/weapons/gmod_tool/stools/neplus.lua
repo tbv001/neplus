@@ -130,8 +130,13 @@ if CLIENT then
 				end
 			end
 
-			local wep = LocalPlayer():GetActiveWeapon()
-			if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= toolName then
+			local ply = LocalPlayer()
+			if not IsValid(ply) then
+				return
+			end
+
+			local wep = ply:GetActiveWeapon()
+			if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= toolName then
 				return
 			end
 
@@ -165,8 +170,13 @@ if CLIENT then
 	end
 
 	local function GetTool()
-		local wep = LocalPlayer():GetActiveWeapon()
-		if not wep:IsValid() or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= "neplus" then
+		local ply = LocalPlayer()
+		if not IsValid(ply) then
+			return
+		end
+
+		local wep = ply:GetActiveWeapon()
+		if not IsValid(wep) or wep:GetClass() ~= "gmod_tool" or wep:GetMode() ~= "neplus" then
 			return
 		end
 
@@ -258,6 +268,10 @@ if CLIENT then
 			end
 		end)
 	end)
+
+	function TOOL:GetOwner()
+		return LocalPlayer()
+	end
 
 	function TOOL:IsGenerating()
 		return Generation.IsGenerating or false
@@ -1033,6 +1047,7 @@ if CLIENT then
 			forceTh = cvTraceHull:GetInt()
 		end
 
+		local pl = self:GetOwner()
 		local trLine = { start = nil, endpos = nil, mask = TraceMask, filter = pl }
 		if forceTh == 1 then -- Ground nodes
 			if not self:TraceHullType(a, b, 1, true) then
@@ -1052,7 +1067,6 @@ if CLIENT then
 			end
 		end
 
-		local pl = self:GetOwner()
 		if forceSt then
 			local H = cvH:GetInt()
 			local maxDz = cvDZ:GetInt()
@@ -3132,6 +3146,15 @@ if SERVER then
 			end
 			net.Send(self:GetOwner())
 		end
+	end
+
+	function TOOL:GetOwner()
+		local swep = self:GetSWEP()
+		if IsValid(swep) then
+			return swep:GetOwner()
+		end
+
+		return NULL
 	end
 
 	function TOOL:LeftClick(tr)

@@ -59,7 +59,7 @@ if CLIENT then
 		Generation.IsGenerating = false
 		currentCoroutine = nil
 
-		if currentTool and IsValid(currentTool:GetOwner()) then
+		if currentTool then
 			currentTool:BuildNodeGrid()
 			currentTool:BuildZone()
 			currentTool:ClearEffects()
@@ -131,7 +131,7 @@ if CLIENT then
 						pcall(onFinish)
 					end
 
-					if currentTool and IsValid(currentTool:GetOwner()) then
+					if currentTool then
 						currentTool:BuildNodeGrid()
 						currentTool:BuildZone()
 						currentTool:ClearEffects()
@@ -148,7 +148,7 @@ if CLIENT then
 					hook.Remove("Think", "NEPlusGenerationTask")
 					Generation.IsGenerating = false
 					currentCoroutine = nil
-					if currentTool and IsValid(currentTool:GetOwner()) then
+					if currentTool then
 						currentTool:BuildNodeGrid()
 						currentTool:BuildZone()
 						currentTool:ClearEffects()
@@ -163,7 +163,7 @@ if CLIENT then
 					hook.Remove("Think", "NEPlusGenerationTask")
 					Generation.IsGenerating = false
 					currentCoroutine = nil
-					if currentTool and IsValid(currentTool:GetOwner()) then
+					if currentTool then
 						currentTool:BuildNodeGrid()
 						currentTool:BuildZone()
 						currentTool:ClearEffects()
@@ -248,7 +248,7 @@ if CLIENT then
 			return
 		end
 
-		local pl = tool:GetOwner()
+		local pl = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local TraceMask = tool:GetTraceMask()
 		local cvPNOGHull = GetConVar("cl_nodegraph_tool_place_node_on_ground_hull")
 		local cvPNOGOffset = GetConVar("cl_nodegraph_tool_place_node_on_ground_offset")
@@ -345,7 +345,7 @@ if CLIENT then
 		}
 
 		net.Start("nodegraph_gen_server")
-		net.WriteEntity(tool:GetOwner())
+		net.WriteEntity((tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer())
 		net.WriteTable(conVars)
 		net.SendToServer()
 	end
@@ -511,7 +511,7 @@ if CLIENT then
 			local nodesToClean = {}
 			local count = 0
 			local distMin = math.min(GetDistLimit(), Generation.cvDistLinkAirNodeGen:GetInt())
-			local pl = tool:GetOwner()
+			local pl = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 			for id, node in pairs(nodes) do
 				if node.type == Constants.NODE_TYPE_AIR then
 					nodegraph:RemoveNode(id)
@@ -696,7 +696,7 @@ if CLIENT then
 		local traceMask = tool.GetTraceMask and tool:GetTraceMask() or MASK_NPCWORLDSTATIC
 		local distMinLinear = math.min(GetDistLimit(), Generation.cvDistLinkJmpLinkGen:GetInt())
 		local distMin = distMinLinear * distMinLinear
-		local pl = tool:GetOwner()
+		local pl = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local count = 0
 
 		notification.AddLegacy("Starting jump link generation...", 0, 8)
@@ -805,7 +805,7 @@ if CLIENT then
 		local allowWater = Generation.cvGrndGenGridWater:GetBool()
 		local hOffset = Generation.cvGrndGenGridOffset:GetInt()
 		local count = 0
-		local pl = tool:GetOwner()
+		local pl = (tool and tool.GetOwner and tool:GetOwner()) or LocalPlayer()
 		local createdNodes = {}
 
 		local origin = Vector(startPos.x, startPos.y, startPos.z)
@@ -863,7 +863,7 @@ if CLIENT then
 
 			for i = 1, #candidates do
 				if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
-					notification.AddLegacy("Reached node limit. Stopped generation.", 1, 8)
+					notification.AddLegacy("Reached node limit. Stopped adding more nodes.", 1, 8)
 					break
 				end
 
