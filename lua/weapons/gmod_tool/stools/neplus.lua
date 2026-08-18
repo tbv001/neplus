@@ -259,6 +259,10 @@ if CLIENT then
 		end)
 	end)
 
+	function TOOL:IsGenerating()
+		return Generation.IsGenerating or false
+	end
+
 	function TOOL:GetNodegraph()
 		return nodegraph
 	end
@@ -288,10 +292,13 @@ if CLIENT then
 	end
 
 	function TOOL:LeftClick(tr)
+		if self:IsGenerating() then
+			return false
+		end
+
 		if self.m_bWaitingForGridStart then
 			self:GenerateGridNodes(tr.HitPos)
 			self.m_bWaitingForGridStart = false
-			notification.AddLegacy("Grid generation finished.", 0, 5)
 			return true
 		end
 
@@ -352,6 +359,10 @@ if CLIENT then
 	end
 
 	function TOOL:RightClick()
+		if self:IsGenerating() then
+			return false
+		end
+
 		if self.m_selected then
 			if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
 				local nodeSelected = nodes[self.m_selected]
@@ -1588,7 +1599,7 @@ if CLIENT then
 					end
 				end
 
-				notification.AddLegacy("Hint Nodes has been loaded from 'nodegraph/" .. game.GetMap() .. ".hint.json'.",
+				notification.AddLegacy("Hint nodes has been loaded from 'nodegraph/" .. game.GetMap() .. ".hint.json'.",
 					0, 8)
 			end
 
@@ -1795,6 +1806,15 @@ if CLIENT then
 		draw.SimpleText("Hints: " .. hintCount, "NEPlusFont", width * 0.5, 50, Color(255, 255, 255), TEXT_ALIGN_CENTER,
 			TEXT_ALIGN_CENTER)
 
+		if self:IsGenerating() then
+			local yOffset = height * 0.5 - 30
+
+			draw.SimpleText("Generating...", "NEPlusFont", width * 0.5, yOffset + 40, Color(255, 255, 255),
+				TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+			return
+		end
+
 		if self:GetOwner():KeyDown(IN_RELOAD) then
 			local yOffset = height * 0.5 - 30
 
@@ -1805,7 +1825,11 @@ if CLIENT then
 			-- Display radius
 			draw.SimpleText("Radius: " .. cvMassRemRadius:GetInt(), "NEPlusFont", width * 0.5, yOffset + 60,
 				Color(200, 200, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		elseif self.m_selected ~= nil and nodes and nodes[self.m_selected] then
+
+			return
+		end
+
+		if self.m_selected ~= nil and nodes and nodes[self.m_selected] then
 			local selectedNode = nodes[self.m_selected]
 			local yOffset = height * 0.5 - 30
 
@@ -1887,7 +1911,6 @@ if CLIENT then
 							for k, v in pairs(hints.NodeHints) do
 								-- Lua tables are 1-indexed, so we need to convert the JSON table Node ID keys to 1-indexed.
 								local newKey = tonumber(k) + 1
-
 								if not nodes[newKey] then
 									continue
 								end
@@ -1909,15 +1932,14 @@ if CLIENT then
 						end
 
 						if loadedHints > 0 then
-							notification.AddLegacy(loadedHints .. " Hint Nodes has been loaded from JSON.", 0, 8)
+							notification.AddLegacy(loadedHints .. " hint nodes has been loaded from JSON.", 0, 8)
 						else
-							notification.AddLegacy("Failed to load Hint Nodes from JSON.", 1, 8)
+							notification.AddLegacy("Failed to load hint nodes from JSON.", 1, 8)
 							notification.AddLegacy("The JSON is either wrong format or empty.", 0, 8)
 						end
 					else
 						timer.Simple(0.1, function()
 							local loadedHints = 0
-
 							for i = 1, #hintData do
 								local data = hintData[i]
 
@@ -1945,7 +1967,7 @@ if CLIENT then
 
 							if loadedHints > 0 then
 								self:ClearEffects()
-								notification.AddLegacy(loadedHints .. " Hint Nodes has been loaded from the map.", 0, 8)
+								notification.AddLegacy(loadedHints .. " hint nodes has been loaded from the map.", 0, 8)
 							end
 						end)
 					end
@@ -1987,7 +2009,8 @@ if CLIENT then
 			end
 
 			self.m_ePreview:SetPos(origin)
-			self.m_ePreview:SetNoDraw((not cvDrawPreview:GetBool() or self.m_selected) and true or false)
+			self.m_ePreview:SetNoDraw((not cvDrawPreview:GetBool() or self:IsGenerating() or self.m_selected) and true or
+				false)
 			self.m_ePreview:ClearLinks()
 			self.m_ePreviewMassRem:SetPos(massRemOrigin)
 			self.m_ePreviewMassRem:SetNoDraw(not pl:KeyDown(IN_RELOAD))
@@ -2018,7 +2041,6 @@ if CLIENT then
 				else
 					local hit, _, _ = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
 					local isHit = false
-
 					if hit then
 						local d = node.pos:DistToSqr(origin)
 						isHit = d <= distMaxSqr
@@ -2032,6 +2054,10 @@ if CLIENT then
 						nodesInRay[#nodesInRay + 1] = nodeID
 					else
 						self:CreateEffect(nodeID)
+
+						if self:IsGenerating() then
+							continue
+						end
 
 						if cvDrawPreview:GetBool() then
 							if node.pos:DistToSqr(origin) <= distMinLink then
@@ -2047,7 +2073,6 @@ if CLIENT then
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
 														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
-
 															break
 														end
 													end
@@ -2071,7 +2096,6 @@ if CLIENT then
 													if k ~= nodeID and nodeB.pos ~= origin and nodeB.type == createType then
 														if Math.IsNodeBetween(origin, nodeB.pos, node.pos, cvNodeRadius) then
 															obstructed = true
-
 															break
 														end
 													end
@@ -2442,7 +2466,7 @@ if CLIENT then
 
 			if file.Exists("data/nodegraph/" .. game.GetMap() .. ".hint.json", "GAME") then
 				notification.AddLegacy(
-					"Hint Nodes has been saved as 'data/nodegraph/" .. game.GetMap() .. ".hint.json'.", 0, 8)
+					"Hint nodes has been saved as 'data/nodegraph/" .. game.GetMap() .. ".hint.json'.", 0, 8)
 			end
 
 			notification.AddLegacy("Successfully saved Nodegraph as AIN.", 0, 8)
@@ -2589,10 +2613,10 @@ if CLIENT then
 				end
 
 				if loadedHints > 0 then
-					notification.AddLegacy(loadedHints .. " Hint Nodes has been loaded from JSON.", 0, 8)
+					notification.AddLegacy(loadedHints .. " hint nodes has been loaded from JSON.", 0, 8)
 				else
 					notification.AddLegacy("The JSON is either wrong format or empty.", 0, 8)
-					notification.AddLegacy("Failed to load Hint Nodes from JSON.", 1, 8)
+					notification.AddLegacy("Failed to load hint nodes from JSON.", 1, 8)
 				end
 			else
 				timer.Simple(0.1, function()
@@ -2625,7 +2649,7 @@ if CLIENT then
 
 					if loadedHints > 0 then
 						tool:ClearEffects()
-						notification.AddLegacy(loadedHints .. " Hint Nodes has been loaded from the map.", 0, 8)
+						notification.AddLegacy(loadedHints .. " hint nodes has been loaded from the map.", 0, 8)
 					end
 				end)
 			end
@@ -2839,13 +2863,18 @@ if CLIENT then
 
 		self:AddControl("Label", {
 			Text = [[This feature requires a Navmesh to be present on the map!
-		Pressing this button will clear Ground Nodes and start the generation. May freeze your game for a while. Please be patient.]]
+		Pressing this button will clear ground nodes and start the generation. This may take a while. Press the button again to cancel the process.]]
 		})
 		local pGenerate = vgui.Create("DButton", panel)
 		pGenerate:SetText("Generate Ground Nodes")
 		pGenerate.DoClick = function()
 			local tool = GetTool()
 			if not tool then
+				return
+			end
+
+			if tool:IsGenerating() then
+				Generation.CancelTask(tool, true)
 				return
 			end
 
@@ -2879,13 +2908,18 @@ if CLIENT then
 		self:AddControl("Label",
 			{
 				Text =
-				"Pressing this button will prompt you to shoot at a position as a starting point, which then will initiate the generation. Press this button again to cancel it. May freeze your game for a while. Please be patient."
+				"Pressing this button will prompt you to shoot at a position as a starting point, which then will initiate the generation. This may take a while. Press this button again to cancel the prompt or generation process."
 			})
 		local pGenGrid = vgui.Create("DButton", panel)
 		pGenGrid:SetText("Generate Ground Nodes")
 		pGenGrid.DoClick = function()
 			local tool = GetTool()
 			if not tool then
+				return
+			end
+
+			if tool:IsGenerating() then
+				Generation.CancelTask(tool, true)
 				return
 			end
 
@@ -2926,15 +2960,20 @@ if CLIENT then
 		self:AddControl("CheckBox",
 			{ Label = "Set All Nodes as Strider Node", Command = "cl_nodegraph_tool_gen_air_strider_node" })
 		self:AddControl("Label", {
-			Text = [[This feature requires Ground Nodes to be present on the map!
+			Text = [[This feature requires ground nodes to be present on the map!
 
-		Pressing this button will clear Air Nodes and start the generation. May freeze your game for a while. Please be patient.]]
+		Pressing this button will clear air nodes and start the generation. This may take a while. Press the button again to cancel the process.]]
 		})
 		local pGenerateAir = vgui.Create("DButton", panel)
 		pGenerateAir:SetText("Generate Air Nodes")
 		pGenerateAir.DoClick = function()
 			local tool = GetTool()
 			if not tool then
+				return
+			end
+
+			if tool:IsGenerating() then
+				Generation.CancelTask(tool, true)
 				return
 			end
 
@@ -2973,13 +3012,18 @@ if CLIENT then
 		self:AddControl("Label",
 			{
 				Text =
-				"Pressing this button will clear Jump Links and start the generation. May freeze your game for a while. Please be patient."
+				"Pressing this button will clear jump links and start the generation. This may take a while. Press the button again to cancel the process."
 			})
 		local pGenerateJumpLinks = vgui.Create("DButton", panel)
 		pGenerateJumpLinks:SetText("Generate Jump Links")
 		pGenerateJumpLinks.DoClick = function()
 			local tool = GetTool()
 			if not tool then
+				return
+			end
+
+			if tool:IsGenerating() then
+				Generation.CancelTask(tool, true)
 				return
 			end
 
@@ -2999,8 +3043,6 @@ end
 --/////////////////////////////////////////////
 
 if SERVER then
-	util.AddNetworkString("nodegraph_gen_server")
-	util.AddNetworkString("nodegraph_gen_client")
 	util.AddNetworkString("nodegraph_cleareffects_client")
 	util.AddNetworkString("nodegraph_get_hint_server")
 	util.AddNetworkString("nodegraph_get_hint_client")
@@ -3034,9 +3076,9 @@ if SERVER then
 
 		if hint.ID and hint.Position and hint.HintType then
 			hintData[#hintData + 1] = {
-				NodeID     = hint.ID,
-				Position   = hint.Position,
-				HintType   = hint.HintType,
+				NodeID = hint.ID,
+				Position = hint.Position,
+				HintType = hint.HintType,
 				IsInfoHint = (cls == "info_hint")
 			}
 
