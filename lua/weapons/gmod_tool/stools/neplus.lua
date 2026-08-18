@@ -449,7 +449,7 @@ if CLIENT then
 			end
 		end
 
-		if table.Count(nodesToClean) > 0 then
+		if #nodesToClean > 0 then
 			self:CleanNodegraphLinks(nodesToClean)
 		end
 
