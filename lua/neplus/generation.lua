@@ -46,7 +46,7 @@ if CLIENT then
 		return cv and cv:GetBool() or false
 	end
 
-	local TimeBudget = 0.006
+	local TimeBudget = 0.012
 	local currentCoroutine = nil
 	local currentTool = nil
 	local taskStartTime = 0
