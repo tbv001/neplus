@@ -1129,13 +1129,11 @@ if CLIENT then
 	local minNode = Vector(-30, -30, -30)
 	local maxNode = Vector(30, 30, 30)
 	function TOOL:GetTraceNode()
-		local distMax = cvDist:GetInt()
-		distMax = distMax * distMax
-
 		local pl = self:GetOwner()
 		local pos = pl:GetShootPos()
 		local dir = pl:GetAimVector()
 		local origin = self:GetPreviewOrigin()
+		local distMax = cvDist:GetInt()
 		local nodeClosest
 		local distClosest = math.huge
 		local nearbyNodes = nodeGrid:Query(pos, distMax, nodes)
