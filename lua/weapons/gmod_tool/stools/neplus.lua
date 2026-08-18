@@ -1998,6 +1998,7 @@ if CLIENT then
 			local massRemOrigin = self:GetMassRemOrigin()
 			local heightOffset = cvH:GetInt()
 			local createType = cvCreateType:GetInt()
+			local isHoldingReload = pl:KeyDown(IN_RELOAD)
 			if createType == Constants.NODE_TYPE_GROUND then
 				origin[3] = origin[3] + heightOffset
 			end
@@ -2017,11 +2018,11 @@ if CLIENT then
 			end
 
 			self.m_ePreview:SetPos(origin)
-			self.m_ePreview:SetNoDraw((not cvDrawPreview:GetBool() or self:IsGenerating() or self.m_selected) and true or
-				false)
+			self.m_ePreview:SetNoDraw((not cvDrawPreview:GetBool() or self:IsGenerating() or isHoldingReload or self.m_selected) and
+				true or false)
 			self.m_ePreview:ClearLinks()
 			self.m_ePreviewMassRem:SetPos(massRemOrigin)
-			self.m_ePreviewMassRem:SetNoDraw(not pl:KeyDown(IN_RELOAD))
+			self.m_ePreviewMassRem:SetNoDraw(not isHoldingReload)
 			self:UpdateSelection(origin)
 
 			local dir = pl:GetAimVector()
@@ -2061,6 +2062,10 @@ if CLIENT then
 				end
 
 				self:CreateEffect(nodeID)
+
+				if isHoldingReload then
+					continue
+				end
 
 				if self:IsGenerating() then
 					continue
