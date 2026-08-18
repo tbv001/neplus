@@ -781,7 +781,7 @@ if CLIENT then
 		nodegraph:RemoveLink(src, dest)
 	end
 
-	function TOOL:TraceHullType(startPos, endPos, hullType, doLift, customMins, customMaxs)
+	function TOOL:TraceHullType(startPos, endPos, hullType, doLift)
 		local offset = 16 - math.Clamp(cvH:GetInt(), 0, 16)
 		local pl = self:GetOwner()
 		local def = HullTypes[hullType]
@@ -789,8 +789,8 @@ if CLIENT then
 			return false
 		end
 
-		local mins = customMins or def.mins
-		local maxs = customMaxs or def.maxs
+		local mins = Vector(def.mins)
+		local maxs = Vector(def.maxs)
 		local lift = doLift and offset or 0
 		if doLift then
 			maxs.z = math.max(maxs.z - (16 - offset), mins.z)
