@@ -354,11 +354,11 @@ if CLIENT then
 					local nodeTrace, nodeTraceID = self:GetTraceNode()
 					local nodeSelected = nodes[self.m_selected]
 
-					if nodeTrace == nodeSelected then
+					if nodeTrace and nodeTrace == nodeSelected then
 						self:RemoveLinks(self.m_selected)
-					elseif self:HasLink(self.m_selected, nodeTraceID) then
+					elseif nodeTraceID and self:HasLink(self.m_selected, nodeTraceID) then
 						self:RemoveLink(self.m_selected, nodeTraceID)
-					else
+					elseif nodeTraceID then
 						if cvJumpLink:GetBool() then
 							self:AddLink(self.m_selected, nodeTraceID, 2)
 						else
@@ -1127,37 +1127,9 @@ if CLIENT then
 		return true
 	end
 
-	local angNode = Angle(0, 0, 0)
-	local minNode = Vector(-30, -30, -30)
-	local maxNode = Vector(30, 30, 30)
 	function TOOL:GetTraceNode()
-		local pl = self:GetOwner()
-		local pos = pl:GetShootPos()
-		local dir = pl:GetAimVector()
-		local origin = self:GetPreviewOrigin()
-		local distMax = cvDist:GetInt()
-		local nodeClosest
-		local distClosest = math.huge
-		local nearbyNodes = nodeGrid:Query(pos, distMax, nodes)
-		for id, node in pairs(nearbyNodes) do
-			if self:IsNodeTypeVisible(node.type) then
-				local hit = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
-				if hit then
-					local d = node.pos:DistToSqr(origin)
-					if d <= distMax then
-						local dPl = node.pos:DistToSqr(pos)
-						if dPl < distClosest then
-							distClosest = dPl
-							nodeClosest = id
-						end
-					end
-				end
-			end
-		end
-
-		if nodeClosest then
-			local node = nodes[nodeClosest]
-			return node, nodeClosest
+		if self.m_traceNode and nodes and nodes[self.m_traceNode] then
+			return nodes[self.m_traceNode], self.m_traceNode
 		end
 	end
 
@@ -1542,6 +1514,9 @@ if CLIENT then
 		self.m_deployed = false
 	end
 
+	local angNode = Angle(0, 0, 0)
+	local minNode = Vector(-30, -30, -30)
+	local maxNode = Vector(30, 30, 30)
 	function TOOL:IsNodeVisible(nodeID)
 		local node = nodes[nodeID]
 		if not node then
@@ -2031,6 +2006,7 @@ if CLIENT then
 			local distMinLink = cvDistLink:GetInt()
 			distMinLink = distMinLink * distMinLink
 
+			local distClosestTrace = math.huge
 			self.m_traceNode = nil
 
 			local nodesInRay = {}
@@ -2053,9 +2029,13 @@ if CLIENT then
 				end
 
 				local hit = util.IntersectRayWithOBB(pos, dir * 32768, node.pos, angNode, minNode, maxNode)
-				local isHit = hit and (node.pos:DistToSqr(origin) <= distMaxSqr)
+				local isHit = hit and (node.pos:DistToSqr(queryUsingPlayerPos) <= distMaxSqr)
 				if isHit then
-					self.m_traceNode = nodeID
+					local dPl = node.pos:DistToSqr(pos)
+					if dPl < distClosestTrace then
+						distClosestTrace = dPl
+						self.m_traceNode = nodeID
+					end
 				end
 
 				if isHit and not self.m_bKeepSelection and self.m_tbEffects[nodeID] and self:IsNodeVisible(nodeID) then
