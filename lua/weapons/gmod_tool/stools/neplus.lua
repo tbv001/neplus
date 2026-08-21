@@ -344,33 +344,35 @@ if CLIENT then
 			if removed > 0 then
 				notification.AddLegacy("Removed " .. removed .. " nodes within " .. radius .. " units.", 0, 8)
 			end
-		else
-			if self.m_selected then
-				if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
-					if self.m_bKeepSelection then
-						local nodeTrace, nodeTraceID = self:GetTraceNode()
-						local nodeSelected = nodes[self.m_selected]
 
-						if nodeTrace == nodeSelected then
-							self:RemoveLinks(self.m_selected)
-						elseif self:HasLink(self.m_selected, nodeTraceID) then
-							self:RemoveLink(self.m_selected, nodeTraceID)
-						else
-							if cvJumpLink:GetBool() then
-								self:AddLink(self.m_selected, nodeTraceID, 2)
-							else
-								self:AddLink(self.m_selected, nodeTraceID)
-							end
-						end
+			return true
+		end
+
+		if self.m_selected then
+			if self:GetOwner():KeyDown(IN_DUCK) or self:GetOwner():KeyDown(IN_USE) then
+				if self.m_bKeepSelection then
+					local nodeTrace, nodeTraceID = self:GetTraceNode()
+					local nodeSelected = nodes[self.m_selected]
+
+					if nodeTrace == nodeSelected then
+						self:RemoveLinks(self.m_selected)
+					elseif self:HasLink(self.m_selected, nodeTraceID) then
+						self:RemoveLink(self.m_selected, nodeTraceID)
 					else
-						self:SolidifySelection()
+						if cvJumpLink:GetBool() then
+							self:AddLink(self.m_selected, nodeTraceID, 2)
+						else
+							self:AddLink(self.m_selected, nodeTraceID)
+						end
 					end
 				else
-					self:RemoveNode(self.m_selected)
+					self:SolidifySelection()
 				end
 			else
-				self:CreateNode(self:GetPreviewOrigin())
+				self:RemoveNode(self.m_selected)
 			end
+		else
+			self:CreateNode(self:GetPreviewOrigin())
 		end
 
 		return true
