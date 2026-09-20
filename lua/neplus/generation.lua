@@ -892,15 +892,35 @@ if CLIENT then
 
 			YieldCheck()
 
-			local candidates = {}
+			local buckets = {}
+			local bucketKeys = {}
 			local rangeSqr = range * range
 			for x = minX, maxX, step do
+				local dx = x - origin.x
+				local i = math.Round(dx / step)
+				local i2 = i * i
+
 				for y = minY, maxY, step do
-					local dx = x - origin.x
 					local dy = y - origin.y
-					if not useRange or (dx * dx + dy * dy) <= rangeSqr then
+					local d2_2d = dx * dx + dy * dy
+					if not useRange or d2_2d <= rangeSqr then
+						local j = math.Round(dy / step)
+						local ij2 = i2 + j * j
+
 						for z = minZ, maxZ, step do
-							candidates[#candidates + 1] = Vector(x, y, z)
+							local dz = z - origin.z
+							local k = math.Round(dz / step)
+							local dKey = ij2 + k * k
+
+							local bucket = buckets[dKey]
+							if not bucket then
+								bucket = {}
+								buckets[dKey] = bucket
+								bucketKeys[#bucketKeys + 1] = dKey
+							end
+
+							bucket[#bucket + 1] = Vector(x, y, z)
+							YieldCheck()
 						end
 					end
 
@@ -910,75 +930,79 @@ if CLIENT then
 				YieldCheck()
 			end
 
-			table.sort(candidates, function(a, b)
-				return a:DistToSqr(origin) < b:DistToSqr(origin)
-			end)
-
+			table.sort(bucketKeys)
 			YieldCheck()
 
-			for i = 1, #candidates do
+			for k = 1, #bucketKeys do
 				if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
 					break
 				end
 
-				local pos = candidates[i]
-				local aboveOffset = Vector(0, 0, 0)
-				local aboveCheckTr = util.TraceLine({
-					start = pos,
-					endpos = pos + Vector(0, 0, 128),
-					mask = traceMask,
-					filter = pl
-				})
-
-				if aboveCheckTr.Hit then
-					aboveOffset.z = aboveCheckTr.HitPos.z - pos.z
-				else
-					aboveOffset.z = 128
-				end
-
-				local placeCheckTr = util.TraceLine({
-					start = pos + aboveOffset,
-					endpos = pos - Vector(0, 0, step * 1.5 + 128),
-					mask = traceMask,
-					filter = pl
-				})
-
-				if placeCheckTr.Hit and not placeCheckTr.StartSolid and placeCheckTr.HitNormal.z >= 0.70710678 then
-					local validWater = true
-					if not allowWater then
-						local contents = util.PointContents(placeCheckTr.HitPos)
-						if bit.band(contents, CONTENTS_WATER) ~= 0 then
-							validWater = false
-						end
+				local bucket = buckets[bucketKeys[k]]
+				for bIdx = 1, #bucket do
+					if nodegraph:CountNodes(nodes) >= Constants.MAX_NODES then
+						break
 					end
 
-					if validWater then
-						local solidCheckTr = util.TraceHull({
-							start = placeCheckTr.HitPos + Vector(0, 0, 10),
-							endpos = placeCheckTr.HitPos + Vector(0, 0, 10),
-							mins = Vector(-13, -13, 0),
-							maxs = Vector(13, 13, 62),
-							mask = traceMask,
-							filter = pl
-						})
+					local pos = bucket[bIdx]
+					local aboveOffset = Vector(0, 0, 0)
+					local aboveCheckTr = util.TraceLine({
+						start = pos,
+						endpos = pos + Vector(0, 0, 128),
+						mask = traceMask,
+						filter = pl
+					})
 
-						if not solidCheckTr.StartSolid then
-							local nearby = nodeGrid:Query(placeCheckTr.HitPos, 50, nodes)
-							if table.Count(nearby) == 0 then
-								local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset),
-									Constants.NODE_TYPE_GROUND, 0, 0, 0)
+					if aboveCheckTr.Hit then
+						aboveOffset.z = aboveCheckTr.HitPos.z - pos.z
+					else
+						aboveOffset.z = 128
+					end
 
-								if nodeGenerated then
-									nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
-									createdNodes[#createdNodes + 1] = nodeGenerated
-									count = count + 1
+					local placeCheckTr = util.TraceLine({
+						start = pos + aboveOffset,
+						endpos = pos - Vector(0, 0, step * 1.5 + 128),
+						mask = traceMask,
+						filter = pl
+					})
+
+					if placeCheckTr.Hit and not placeCheckTr.StartSolid and placeCheckTr.HitNormal.z >= 0.70710678 then
+						local validWater = true
+						if not allowWater then
+							local contents = util.PointContents(placeCheckTr.HitPos)
+							if bit.band(contents, CONTENTS_WATER) ~= 0 then
+								validWater = false
+							end
+						end
+
+						if validWater then
+							local solidCheckTr = util.TraceHull({
+								start = placeCheckTr.HitPos + Vector(0, 0, 10),
+								endpos = placeCheckTr.HitPos + Vector(0, 0, 10),
+								mins = Vector(-13, -13, 0),
+								maxs = Vector(13, 13, 62),
+								mask = traceMask,
+								filter = pl
+							})
+
+							if not solidCheckTr.StartSolid then
+								local nearby = nodeGrid:Query(placeCheckTr.HitPos, 50, nodes)
+								if table.Count(nearby) == 0 then
+									local nodeGenerated = nodegraph:AddNode(placeCheckTr.HitPos + Vector(0, 0, hOffset),
+										Constants.NODE_TYPE_GROUND, 0, 0, 0)
+
+									if nodeGenerated then
+										nodeGrid:Insert(nodeGenerated, nodes[nodeGenerated])
+										createdNodes[#createdNodes + 1] = nodeGenerated
+										count = count + 1
+									end
 								end
 							end
 						end
 					end
-				end
 
-				YieldCheck()
+					YieldCheck()
+				end
 			end
 
 			if count > 0 then
