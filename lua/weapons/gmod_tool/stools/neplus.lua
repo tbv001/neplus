@@ -2275,23 +2275,27 @@ if CLIENT then
 		pContainer:SetTall(32)
 		pContainer:SetPaintBackground(false)
 		local lbl = vgui.Create("DLabel", pContainer)
-		lbl:SetText("Snap to grid:")
+		lbl:SetText("Snap to Grid")
 		lbl:SetDark(true)
-		lbl:SizeToContents()
 		lbl:Dock(LEFT)
-		lbl:DockMargin(0, 0, 8, 0)
+		local wang = vgui.Create("DLabel", pContainer)
+		wang:SetText(tostring(snap))
+		wang:SetContentAlignment(4)
+		wang:SetTextInset(4, 0)
+		wang:SetDark(true)
+		wang:Dock(RIGHT)
+		wang:SetWide(45)
 		local slider = vgui.Create("DSlider", pContainer)
 		slider:SetLockY(0.5)
 		slider:SetTrapInside(true)
 		slider:Dock(FILL)
 		slider:SetHeight(16)
 		Derma_Hook(slider, "Paint", "Paint", "NumSlider")
-		local wang = vgui.Create("DLabel", pContainer)
-		wang:SetText(tostring(snap))
-		wang:SetContentAlignment(5)
-		wang:SetDark(true)
-		wang:Dock(RIGHT)
-		wang:SetWidth(20)
+		slider:SetNotches(#values - 1)
+
+		pContainer.PerformLayout = function(s)
+			lbl:SetWide(s:GetWide() / 2.4)
+		end
 
 		local idx
 		for _, val in pairs(values) do
@@ -2866,10 +2870,60 @@ if CLIENT then
 		self:AddControl("Label", { Text = "  " })
 		self:AddControl("Label", { Text = "Grid Ground Node Generation" })
 
-		self:AddControl("Slider",
-			{ type = "int", min = 64, max = 1024, label = "Grid Step", Command = "cl_nodegraph_tool_gen_grid_step" })
+		local gridStepValues = { 64, 128, 256, 512, 1024 }
+		local gridStep = Generation.cvGrndGenGridStep:GetInt()
+		local pContainerGrid = vgui.Create("DPanel", panel)
+		pContainerGrid:SetTall(32)
+		pContainerGrid:SetPaintBackground(false)
+		local gridLbl = vgui.Create("DLabel", pContainerGrid)
+		gridLbl:SetText("Grid Step")
+		gridLbl:SetDark(true)
+		gridLbl:Dock(LEFT)
+		local gridValLbl = vgui.Create("DLabel", pContainerGrid)
+		gridValLbl:SetText(tostring(gridStep))
+		gridValLbl:SetContentAlignment(4)
+		gridValLbl:SetTextInset(4, 0)
+		gridValLbl:SetDark(true)
+		gridValLbl:Dock(RIGHT)
+		gridValLbl:SetWide(45)
+		local gridSlider = vgui.Create("DSlider", pContainerGrid)
+		gridSlider:SetLockY(0.5)
+		gridSlider:SetTrapInside(true)
+		gridSlider:Dock(FILL)
+		gridSlider:SetHeight(16)
+		Derma_Hook(gridSlider, "Paint", "Paint", "NumSlider")
+		gridSlider:SetNotches(#gridStepValues - 1)
+
+		pContainerGrid.PerformLayout = function(s)
+			gridLbl:SetWide(s:GetWide() / 2.4)
+		end
+
+		local gridStepValIdx
+		for _, val in pairs(gridStepValues) do
+			if val == gridStep then
+				gridStepValIdx = _
+				break
+			end
+		end
+
+		if gridStepValIdx then
+			gridSlider:SetSlideX((gridStepValIdx - 1) / (#gridStepValues - 1))
+		end
+
+		gridSlider.TranslateValues = function(_, x, y)
+			local num = tonumber(x * (#gridStepValues - 1) + 1) or 0
+			num = math.Round(num)
+			local val = math.Clamp(num, 1, #gridStepValues)
+			gridValLbl:SetText(tostring(gridStepValues[val]))
+			RunConsoleCommand("cl_nodegraph_tool_gen_grid_step", gridStepValues[val])
+			return ((num - 1) / (#gridStepValues - 1)), y
+		end
+
+		self:AddItem(pContainerGrid)
+
 		self:AddControl("Slider",
 			{ type = "int", min = 512, max = 8192, label = "Grid Range", Command = "cl_nodegraph_tool_gen_grid_range" })
+
 		self:AddControl("Slider",
 			{
 				type = "int",
