@@ -2870,9 +2870,6 @@ if CLIENT then
 		self:AddControl("Label", { Text = "  " })
 		self:AddControl("Label", { Text = "Grid Ground Node Generation" })
 
-		-- self:AddControl("Slider",
-		-- 	{ type = "int", min = 64, max = 1024, label = "Grid Step", Command = "cl_nodegraph_tool_gen_grid_step" })
-
 		local gridStepValues = { 64, 128, 256, 512, 1024 }
 		local gridStep = Generation.cvGrndGenGridStep:GetInt()
 		local pContainerGrid = vgui.Create("DPanel", panel)
