@@ -903,6 +903,8 @@ if CLIENT then
 							candidates[#candidates + 1] = Vector(x, y, z)
 						end
 					end
+
+					YieldCheck()
 				end
 
 				YieldCheck()
