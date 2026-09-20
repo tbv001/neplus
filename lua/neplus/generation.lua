@@ -139,11 +139,13 @@ if CLIENT then
 				local nodeCount = (nodegraph and nodes and nodegraph:CountNodes(nodes)) or (nodes and table.Count(nodes)) or
 					0
 				local targetPly = IsValid(ply) and ply or LocalPlayer()
+
 				if IsValid(targetPly) then
 					targetPly:ChatPrint("[Nodegraph Editor+] Generating... (" ..
 						nodeCount ..
 						"/" .. Constants.MAX_NODES .. ") (" .. Helpers.ConvertTime(Generation.TimeElapsed) .. ")")
 				end
+
 				nextProgressPrint = SysTime() + 5
 			end
 
@@ -177,6 +179,7 @@ if CLIENT then
 					Generation.IsGenerating = false
 					Generation.TimeElapsed = SysTime() - taskStartTime
 					currentCoroutine = nil
+
 					if currentTool then
 						currentTool:BuildNodeGrid()
 						currentTool:BuildZone()
@@ -193,6 +196,7 @@ if CLIENT then
 					Generation.IsGenerating = false
 					Generation.TimeElapsed = SysTime() - taskStartTime
 					currentCoroutine = nil
+
 					if currentTool then
 						currentTool:BuildNodeGrid()
 						currentTool:BuildZone()
@@ -406,6 +410,7 @@ if CLIENT then
 			for id, node in pairs(nodes) do
 				if node.type == Constants.NODE_TYPE_GROUND then
 					nodegraph:RemoveNode(id)
+					YieldCheck()
 				end
 			end
 
@@ -556,6 +561,7 @@ if CLIENT then
 			for id, node in pairs(nodes) do
 				if node.type == Constants.NODE_TYPE_AIR then
 					nodegraph:RemoveNode(id)
+					YieldCheck()
 				end
 
 				if node.type == Constants.NODE_TYPE_GROUND then
@@ -879,6 +885,7 @@ if CLIENT then
 				for id, node in pairs(nodes) do
 					if node.type == Constants.NODE_TYPE_GROUND then
 						nodegraph:RemoveNode(id)
+						YieldCheck()
 					end
 				end
 			end
